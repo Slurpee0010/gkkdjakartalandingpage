@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "gkkdjak@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['title', 'date', 'time', 'location', 'registrationLink']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.date is string && data.date.size() > 0 && data.date.size() < 100 &&
+             data.time is string && data.time.size() > 0 && data.time.size() < 100 &&
+             data.location is string && data.location.size() > 0 && data.location.size() < 500 &&
+             data.registrationLink is string &&
+             data.registrationLink.size() > 0 &&
+             data.registrationLink.size() < 2000 &&
+             data.registrationLink.matches('^https?://.+');
+    }
+
+    function isValidService(data) {
+      return data.keys().hasAll(['title', 'description']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 2000;
+    }
+
+    function isValidWorshipSchedule(data) {
+      return data.keys().hasAll(['satellite', 'place', 'serviceName', 'category', 'serviceTime', 'contactPerson']) &&
+             (
+               data.satellite == "Jakarta Center" ||
+               data.satellite == "Jakarta Utara" ||
+               data.satellite == "Southers" ||
+               data.satellite == "Ciledug" ||
+               data.satellite == "Serpong"
+             ) &&
+             data.place is string && data.place.size() > 0 && data.place.size() < 1000 &&
+             data.serviceName is string && data.serviceName.size() > 0 && data.serviceName.size() < 200 &&
+             (
+               data.category == "onsite" ||
+               data.category == "online" ||
+               data.category == "onsite dan online"
+             ) &&
+             data.serviceTime is string && data.serviceTime.size() > 0 && data.serviceTime.size() < 100 &&
+             data.contactPerson is string && data.contactPerson.size() > 0 && data.contactPerson.size() < 300;
+    }
+
+    function isValidOnlineWorshipVideo(data) {
+      return data.keys().hasAll(['youtubeUrl']) &&
+             data.keys().hasOnly(['youtubeUrl', 'updatedAt']) &&
+             data.youtubeUrl is string &&
+             data.youtubeUrl.size() > 0 &&
+             data.youtubeUrl.size() < 2000 &&
+             data.youtubeUrl.matches('^https?://(www\\.)?(youtube\\.com|m\\.youtube\\.com|youtu\\.be)/.+') &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() < 100));
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidEvent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidService(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /worshipSchedules/{scheduleId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidWorshipSchedule(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update: if isAdmin() &&
+        settingId == "onlineWorshipVideo" &&
+        isValidOnlineWorshipVideo(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

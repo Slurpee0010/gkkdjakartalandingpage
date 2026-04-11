@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "Event": {
+      "title": "Event",
+      "description": "Church events and worship schedules",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the event" },
+        "date": { "type": "string", "description": "Date of the event" },
+        "time": { "type": "string", "description": "Time of the event" },
+        "location": { "type": "string", "description": "Location of the event" },
+        "registrationLink": { "type": "string", "description": "Registration URL for the event" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "date", "time", "location", "registrationLink"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Church services and ministries",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the service" },
+        "description": { "type": "string", "description": "Description of the service" }
+      },
+      "required": ["title", "description"]
+    },
+    "WorshipSchedule": {
+      "title": "Worship Schedule",
+      "description": "Weekly worship schedule for satellite churches",
+      "type": "object",
+      "properties": {
+        "satellite": { "type": "string", "description": "Satellite church name" },
+        "place": { "type": "string", "description": "Worship venue or address" },
+        "serviceName": { "type": "string", "description": "Name of the worship service" },
+        "category": { "type": "string", "description": "Service category such as onsite or online" },
+        "serviceTime": { "type": "string", "description": "Time of worship" },
+        "contactPerson": { "type": "string", "description": "Contact person for the service" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["satellite", "place", "serviceName", "category", "serviceTime", "contactPerson"]
+    },
+    "OnlineWorshipVideo": {
+      "title": "Online Worship Video",
+      "description": "Weekly YouTube video used in the online worship section on the Events page",
+      "type": "object",
+      "properties": {
+        "youtubeUrl": { "type": "string", "description": "YouTube video URL for weekly online worship" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["youtubeUrl"]
+    }
+  },
+  "firestore": {
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Collection of church events"
+    },
+    "/services/{serviceId}": {
+      "schema": "Service",
+      "description": "Collection of church services"
+    },
+    "/worshipSchedules/{scheduleId}": {
+      "schema": "WorshipSchedule",
+      "description": "Collection of weekly worship schedules for each church satellite"
+    },
+    "/settings/onlineWorshipVideo": {
+      "schema": "OnlineWorshipVideo",
+      "description": "Singleton document for the weekly online worship YouTube video"
+    }
+  }
+}
