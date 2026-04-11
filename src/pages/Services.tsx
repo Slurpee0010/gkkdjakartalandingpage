@@ -59,6 +59,71 @@ export default function Services({ setActivePage }: { setActivePage: (page: stri
           })}
         </div>
 
+        <div className="mb-10 overflow-hidden rounded-[3rem] border border-church-gold/10 bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(248,244,235,0.96))] p-12 md:p-24 shadow-[0_20px_60px_rgba(26,26,26,0.06)]">
+          <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-[1.05fr_0.95fr]">
+            <div>
+              <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-church-gold/15 bg-church-gold/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-church-gold">
+                <BookOpen size={14} />
+                Pendalaman Alkitab
+              </span>
+              <h2 className="serif mb-8 text-4xl font-bold uppercase leading-tight text-church-dark md:text-6xl">
+                Kelompok Kecil untuk <br /> <span className="text-church-gold">Belajar Firman</span> Bersama
+              </h2>
+              <p className="mb-10 text-lg leading-relaxed text-church-dark/65">
+                Pendalaman Alkitab menolong jemaat bertumbuh lewat kelompok pemuridan kecil yang hangat, terarah,
+                dan memakai buku-buku yang sudah tersedia agar pembelajaran firman Tuhan bisa dijalani bersama secara konsisten.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActivePage("bible-study")}
+                className="mb-10 inline-flex items-center gap-3 rounded-full bg-church-dark px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-church-cream transition-transform hover:-translate-y-0.5"
+              >
+                Selengkapnya
+                <ArrowRight size={16} />
+              </button>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {[
+                  "Belajar Alkitab dalam suasana akrab, terbuka, dan mudah diikuti.",
+                  "Materi bertahap yang menolong dari dasar iman sampai pertumbuhan lanjutan.",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-[1.6rem] border border-church-gold/10 bg-white px-5 py-4 text-sm leading-relaxed text-church-dark/70"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              {[
+                { src: "/img/4mt.jpg", alt: "Buku 4MT" },
+                { src: "/img/som.jpg", alt: "Buku SOM" },
+                { src: "/img/sod1.jpg", alt: "Buku SOD 1" },
+                { src: "/img/sod2.jpg", alt: "Buku SOD 2" },
+              ].map((book, index) => (
+                <motion.div
+                  key={book.alt}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.08 }}
+                  className="overflow-hidden rounded-[2rem] border border-church-gold/10 bg-white p-3 shadow-[0_18px_60px_rgba(26,26,26,0.08)]"
+                >
+                  <div className="aspect-[4/5] overflow-hidden rounded-[1.4rem] bg-church-cream">
+                    <img
+                      src={book.src}
+                      alt={book.alt}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="bg-church-dark rounded-[3rem] p-12 md:p-24 text-church-cream relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(197,160,89,0.18),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_30%)]" />
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
