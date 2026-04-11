@@ -6,6 +6,7 @@ import About from "./pages/About";
 import Mission from "./pages/Mission";
 import Services from "./pages/Services";
 import BlessComn from "./pages/BlessComn";
+import BibleStudy from "./pages/BibleStudy";
 import Events from "./pages/Events";
 import WorshipSchedules from "./pages/WorshipSchedules";
 import Contact from "./pages/Contact";
@@ -27,6 +28,8 @@ export default function App() {
         return <Services setActivePage={setActivePage} />;
       case "blesscomn":
         return <BlessComn setActivePage={setActivePage} />;
+      case "bible-study":
+        return <BibleStudy setActivePage={setActivePage} />;
       case "events":
         return <Events />;
       case "worship":

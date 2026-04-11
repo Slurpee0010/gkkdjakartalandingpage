@@ -23,9 +23,11 @@ export default function Navbar({ activePage, setActivePage }: { activePage: stri
   const serviceItems = [
     { name: "Layanan", id: "services" },
     { name: "BlessComn", id: "blesscomn" },
+    { name: "Pendalaman Alkitab", id: "bible-study" },
   ];
   const isAboutActive = activePage === "about" || activePage === "mission";
-  const isServicesActive = activePage === "services" || activePage === "blesscomn";
+  const isServicesActive =
+    activePage === "services" || activePage === "blesscomn" || activePage === "bible-study";
 
   const navigateTo = (page: string) => {
     setActivePage(page);
@@ -150,7 +152,7 @@ export default function Navbar({ activePage, setActivePage }: { activePage: stri
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 8 }}
-                    className="absolute right-0 top-full mt-4 w-56 rounded-2xl border border-church-gold/15 bg-white p-2 shadow-[0_18px_50px_rgba(26,26,26,0.12)]"
+                    className="absolute right-0 top-full mt-4 w-72 rounded-2xl border border-church-gold/15 bg-white p-2 shadow-[0_18px_50px_rgba(26,26,26,0.12)]"
                   >
                     {serviceItems.map((item) => (
                       <button
