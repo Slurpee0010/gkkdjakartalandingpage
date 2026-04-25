@@ -3,6 +3,8 @@ import { motion } from "motion/react";
 import { ArrowRight, BookOpen, HeartHandshake, ShieldCheck, Globe } from "lucide-react";
 import { db } from "../lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
+import AppButton from "../components/ui/AppButton";
+import type { NavigateToPage } from "../lib/navigation";
 
 interface Service {
   id: number | string;
@@ -10,7 +12,7 @@ interface Service {
   description: string;
 }
 
-export default function Services({ setActivePage }: { setActivePage: (page: string) => void }) {
+export default function Services({ setActivePage }: { setActivePage: NavigateToPage }) {
   const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
@@ -73,14 +75,14 @@ export default function Services({ setActivePage }: { setActivePage: (page: stri
                 Pendalaman Alkitab menolong jemaat bertumbuh lewat kelompok pemuridan kecil yang hangat, terarah,
                 dan memakai buku-buku yang sudah tersedia agar pembelajaran firman Tuhan bisa dijalani bersama secara konsisten.
               </p>
-              <button
+              <AppButton
                 type="button"
                 onClick={() => setActivePage("bible-study")}
                 className="mb-10 inline-flex items-center gap-3 rounded-full bg-church-dark px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-church-cream transition-transform hover:-translate-y-0.5"
               >
                 Selengkapnya
                 <ArrowRight size={16} />
-              </button>
+              </AppButton>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {[
                   "Belajar Alkitab dalam suasana akrab, terbuka, dan mudah diikuti.",
@@ -138,14 +140,14 @@ export default function Services({ setActivePage }: { setActivePage: (page: stri
               <p className="text-church-cream/70 text-lg leading-relaxed mb-12">
                 Blesscomn adalah komunitas sel kami di mana Anda dapat bertumbuh dalam iman, membangun persahabatan yang bermakna, dan saling mendoakan.
               </p>
-              <button
+              <AppButton
                 type="button"
                 onClick={() => setActivePage("blesscomn")}
                 className="mb-10 inline-flex items-center gap-3 rounded-full bg-church-gold px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-church-dark transition-transform hover:-translate-y-0.5"
               >
                 Selengkapnya
                 <ArrowRight size={16} />
-              </button>
+              </AppButton>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <h4 className="serif text-xl font-bold text-church-gold uppercase">Visi</h4>

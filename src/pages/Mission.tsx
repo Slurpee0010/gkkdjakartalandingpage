@@ -1,5 +1,7 @@
 import { motion } from "motion/react";
 import { ArrowRight, Compass, Globe2, HeartHandshake, MapPinned } from "lucide-react";
+import AppButton from "../components/ui/AppButton";
+import type { NavigateToPage } from "../lib/navigation";
 
 const missionRegions = [
   {
@@ -52,7 +54,7 @@ const missionValues = [
   "Pemuridan, doa, dan penguatan jemaat menjadi fondasi pelayanan misi kami.",
 ];
 
-export default function Mission({ setActivePage }: { setActivePage: (page: string) => void }) {
+export default function Mission({ setActivePage }: { setActivePage: NavigateToPage }) {
   return (
     <div className="pt-28 pb-24 px-4">
       <div className="max-w-7xl mx-auto space-y-10">
@@ -71,21 +73,21 @@ export default function Mission({ setActivePage }: { setActivePage: (page: strin
                 Misi yang kami lakukan sudah menjangkau banyak daerah di Indonesia dan bangsa-bangsa lain seperti Papua, Lampung, Sumba, Kamboja, Bali dan Kupang.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <button
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("contact")}
                   className="inline-flex items-center gap-3 rounded-full bg-church-gold px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-church-dark transition-transform hover:-translate-y-0.5"
                 >
                   Hubungi Tim Misi
                   <ArrowRight size={16} />
-                </button>
-                <button
+                </AppButton>
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("about")}
                   className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-church-cream/85 transition-colors hover:bg-white/10"
                 >
                   Kembali ke Tentang
-                </button>
+                </AppButton>
               </div>
             </div>
 

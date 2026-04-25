@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { collection, getDocs } from "firebase/firestore";
 import { CalendarDays, Church, Clock3, MapPin, Phone, Radio } from "lucide-react";
 import { db } from "../lib/firebase";
+import AppButton from "../components/ui/AppButton";
 import {
   DEFAULT_WORSHIP_SCHEDULES,
   SATELLITE_LOCAL_IMAGES,
@@ -193,8 +194,10 @@ export default function WorshipSchedules() {
         <section className="mb-12">
           <div className="flex flex-wrap gap-3">
             {[ALL_FILTER, ...SATELLITE_OPTIONS].map((filter) => (
-              <button
+              <AppButton
                 key={filter}
+                type="button"
+                buttonMotion="lift"
                 onClick={() => setActiveFilter(filter)}
                 className={`rounded-full px-5 py-3 text-sm uppercase tracking-widest transition-all ${
                   activeFilter === filter
@@ -203,7 +206,7 @@ export default function WorshipSchedules() {
                 }`}
               >
                 {filter}
-              </button>
+              </AppButton>
             ))}
           </div>
         </section>

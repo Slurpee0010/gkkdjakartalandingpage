@@ -1,210 +1,350 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import AppButton from "./ui/AppButton";
+import { cn } from "../lib/cn";
+import {
+  ABOUT_NAV_ITEMS,
+  BASIC_NAV_ITEMS,
+  SECONDARY_NAV_ITEMS,
+  SERVICE_NAV_ITEMS,
+  isAboutPage,
+  isServicePage,
+  type NavigationItem,
+  type NavigateToPage,
+  type PageId,
+} from "../lib/navigation";
 
-export default function Navbar({ activePage, setActivePage }: { activePage: string, setActivePage: (page: string) => void }) {
+type DropdownKey = "about" | "services";
+
+interface NavbarProps {
+  activePage: PageId;
+  setActivePage: NavigateToPage;
+}
+
+interface DesktopDropdownProps {
+  activePage: PageId;
+  isOpen: boolean;
+  items: NavigationItem[];
+  label: string;
+  onClose: () => void;
+  onOpen: () => void;
+  onToggle: () => void;
+  setActivePage: NavigateToPage;
+  align?: "left" | "right";
+  active?: boolean;
+  widthClassName?: string;
+}
+
+interface MobileAccordionProps {
+  activePage: PageId;
+  isOpen: boolean;
+  items: NavigationItem[];
+  label: string;
+  onToggle: () => void;
+  setActivePage: NavigateToPage;
+  active?: boolean;
+}
+
+function DesktopNavButton({
+  item,
+  active,
+  onClick,
+}: {
+  key?: string;
+  item: NavigationItem;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <AppButton
+      buttonMotion="nav"
+      active={active}
+      onClick={onClick}
+      className={cn(
+        "px-1 py-2 text-sm font-medium tracking-widest uppercase",
+        active ? "text-church-gold" : "text-church-dark/70 hover:text-church-gold",
+      )}
+    >
+      {item.name}
+    </AppButton>
+  );
+}
+
+function MobileNavButton({
+  item,
+  active,
+  onClick,
+}: {
+  key?: string;
+  item: NavigationItem;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <AppButton
+      buttonMotion="lift"
+      active={active}
+      onClick={onClick}
+      className={cn(
+        "block w-full rounded-2xl px-3 py-4 text-left text-base font-medium uppercase tracking-widest",
+        active ? "bg-church-gold/8 text-church-gold" : "text-church-dark/70 hover:bg-white/80 hover:text-church-dark",
+      )}
+    >
+      {item.name}
+    </AppButton>
+  );
+}
+
+function DesktopDropdown({
+  activePage,
+  active = false,
+  align = "left",
+  isOpen,
+  items,
+  label,
+  onClose,
+  onOpen,
+  onToggle,
+  setActivePage,
+  widthClassName = "w-64",
+}: DesktopDropdownProps) {
+  const alignmentClassName = align === "right" ? "right-0" : "left-0";
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={onOpen}
+      onMouseLeave={onClose}
+    >
+      <AppButton
+        type="button"
+        buttonMotion="nav"
+        active={active}
+        onClick={onToggle}
+        className={cn(
+          "inline-flex items-center gap-2 px-1 py-2 text-sm font-medium tracking-widest uppercase",
+          active ? "text-church-gold" : "text-church-dark/70 hover:text-church-gold",
+        )}
+        aria-expanded={isOpen}
+      >
+        {label}
+        <ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />
+      </AppButton>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className={cn(
+              "absolute top-full mt-4 rounded-2xl border border-church-gold/15 bg-white p-2 shadow-[0_18px_50px_rgba(26,26,26,0.12)]",
+              alignmentClassName,
+              widthClassName,
+            )}
+          >
+            {items.map((item) => (
+              <AppButton
+                key={item.id}
+                type="button"
+                buttonMotion="lift"
+                onClick={() => {
+                  setActivePage(item.id);
+                  onClose();
+                }}
+                className={cn(
+                  "block w-full rounded-xl px-4 py-3 text-left text-sm font-medium uppercase tracking-[0.18em]",
+                  activePage === item.id
+                    ? "bg-church-gold/10 text-church-gold"
+                    : "text-church-dark/70 hover:bg-church-cream hover:text-church-dark",
+                )}
+              >
+                {item.name}
+              </AppButton>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function MobileAccordion({
+  activePage,
+  active = false,
+  isOpen,
+  items,
+  label,
+  onToggle,
+  setActivePage,
+}: MobileAccordionProps) {
+  return (
+    <div className="rounded-2xl border border-church-gold/10 bg-white/60">
+      <AppButton
+        type="button"
+        buttonMotion="lift"
+        onClick={onToggle}
+        className={cn(
+          "flex w-full items-center justify-between rounded-2xl px-3 py-4 text-left text-base font-medium uppercase tracking-widest",
+          active ? "text-church-gold" : "text-church-dark/70 hover:text-church-dark",
+        )}
+        aria-expanded={isOpen}
+      >
+        <span>{label}</span>
+        <ChevronDown size={18} className={cn("transition-transform", isOpen && "rotate-180")} />
+      </AppButton>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-church-gold/10"
+          >
+            {items.map((item) => (
+              <AppButton
+                key={item.id}
+                type="button"
+                buttonMotion="lift"
+                onClick={() => setActivePage(item.id)}
+                className={cn(
+                  "block w-full px-5 py-3 text-left text-sm font-medium uppercase tracking-[0.18em]",
+                  activePage === item.id
+                    ? "bg-church-gold/10 text-church-gold"
+                    : "text-church-dark/70 hover:bg-church-cream",
+                )}
+              >
+                {item.name}
+              </AppButton>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default function Navbar({ activePage, setActivePage }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isServicesOpen, setIsServicesOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
 
-  const basicNavItems = [
-    { name: "Home", id: "home" },
-    { name: "Jadwal Ibadah", id: "worship" },
-  ];
-  const secondaryNavItems = [
-    { name: "Event", id: "events" },
-    { name: "Kontak", id: "contact" },
-    { name: "Admin", id: "admin" },
-  ];
-  const aboutItems = [
-    { name: "Tentang", id: "about" },
-    { name: "Pelayanan Misi", id: "mission" },
-  ];
-  const serviceItems = [
-    { name: "Layanan", id: "services" },
-    { name: "BlessComn", id: "blesscomn" },
-    { name: "Pendalaman Alkitab", id: "bible-study" },
-  ];
-  const isAboutActive = activePage === "about" || activePage === "mission";
-  const isServicesActive =
-    activePage === "services" || activePage === "blesscomn" || activePage === "bible-study";
+  const isAboutActive = isAboutPage(activePage);
+  const isServicesActive = isServicePage(activePage);
 
-  const navigateTo = (page: string) => {
-    setActivePage(page);
-    setIsAboutOpen(false);
-    setIsServicesOpen(false);
+  const closeMenus = () => {
+    setOpenDropdown(null);
     setIsOpen(false);
+  };
+
+  useEffect(() => {
+    closeMenus();
+  }, [activePage]);
+
+  const navigateTo = (page: PageId) => {
+    setActivePage(page);
+    closeMenus();
+  };
+
+  const toggleDropdown = (key: DropdownKey) => {
+    setOpenDropdown((current) => (current === key ? null : key));
   };
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 bg-church-cream/80 backdrop-blur-md border-b border-church-gold/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20 items-center">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigateTo("home")}>
+          <AppButton
+            type="button"
+            buttonMotion="lift"
+            onClick={() => navigateTo("home")}
+            className="flex items-center gap-3 rounded-full px-2 py-2 text-left"
+          >
             <img
               src="/img/logo.png"
               alt="Logo GKKD Jakarta"
               className="h-12 w-12 object-contain"
             />
             <span className="serif text-2xl font-bold tracking-tight text-church-dark uppercase">GKKD Jakarta</span>
-          </div>
+          </AppButton>
 
-          {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-8">
-            {basicNavItems.slice(0, 1).map((item) => (
-              <button
+            {BASIC_NAV_ITEMS.slice(0, 1).map((item) => (
+              <DesktopNavButton
                 key={item.id}
+                item={item}
+                active={activePage === item.id}
                 onClick={() => navigateTo(item.id)}
-                className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-church-gold ${
-                  activePage === item.id ? "text-church-gold border-b border-church-gold" : "text-church-dark/70"
-                }`}
-              >
-                {item.name}
-              </button>
+              />
             ))}
 
-            <div
-              className="relative"
-              onMouseEnter={() => {
-                setIsAboutOpen(true);
-                setIsServicesOpen(false);
-              }}
-              onMouseLeave={() => setIsAboutOpen(false)}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAboutOpen((current) => !current);
-                  setIsServicesOpen(false);
-                }}
-                className={`inline-flex items-center gap-2 text-sm font-medium tracking-widest uppercase transition-colors hover:text-church-gold ${
-                  isAboutActive ? "text-church-gold border-b border-church-gold" : "text-church-dark/70"
-                }`}
-              >
-                Tentang
-                <ChevronDown size={16} className={`transition-transform ${isAboutOpen ? "rotate-180" : ""}`} />
-              </button>
+            <DesktopDropdown
+              activePage={activePage}
+              active={isAboutActive}
+              isOpen={openDropdown === "about"}
+              items={ABOUT_NAV_ITEMS}
+              label="Tentang"
+              onOpen={() => setOpenDropdown("about")}
+              onClose={() => setOpenDropdown(null)}
+              onToggle={() => toggleDropdown("about")}
+              setActivePage={navigateTo}
+            />
 
-              <AnimatePresence>
-                {isAboutOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 8 }}
-                    className="absolute left-0 top-full mt-4 w-64 rounded-2xl border border-church-gold/15 bg-white p-2 shadow-[0_18px_50px_rgba(26,26,26,0.12)]"
-                  >
-                    {aboutItems.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => navigateTo(item.id)}
-                        className={`block w-full rounded-xl px-4 py-3 text-left text-sm font-medium uppercase tracking-[0.18em] transition-colors ${
-                          activePage === item.id
-                            ? "bg-church-gold/10 text-church-gold"
-                            : "text-church-dark/70 hover:bg-church-cream hover:text-church-dark"
-                        }`}
-                      >
-                        {item.name}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {basicNavItems.slice(1).map((item) => (
-              <button
+            {BASIC_NAV_ITEMS.slice(1).map((item) => (
+              <DesktopNavButton
                 key={item.id}
+                item={item}
+                active={activePage === item.id}
                 onClick={() => navigateTo(item.id)}
-                className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-church-gold ${
-                  activePage === item.id ? "text-church-gold border-b border-church-gold" : "text-church-dark/70"
-                }`}
-              >
-                {item.name}
-              </button>
+              />
             ))}
 
-            <div
-              className="relative"
-              onMouseEnter={() => {
-                setIsServicesOpen(true);
-                setIsAboutOpen(false);
-              }}
-              onMouseLeave={() => setIsServicesOpen(false)}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setIsServicesOpen((current) => !current);
-                  setIsAboutOpen(false);
-                }}
-                className={`inline-flex items-center gap-2 text-sm font-medium tracking-widest uppercase transition-colors hover:text-church-gold ${
-                  isServicesActive ? "text-church-gold border-b border-church-gold" : "text-church-dark/70"
-                }`}
-              >
-                Layanan
-                <ChevronDown size={16} className={`transition-transform ${isServicesOpen ? "rotate-180" : ""}`} />
-              </button>
+            <DesktopDropdown
+              activePage={activePage}
+              active={isServicesActive}
+              align="right"
+              isOpen={openDropdown === "services"}
+              items={SERVICE_NAV_ITEMS}
+              label="Layanan"
+              onOpen={() => setOpenDropdown("services")}
+              onClose={() => setOpenDropdown(null)}
+              onToggle={() => toggleDropdown("services")}
+              setActivePage={navigateTo}
+              widthClassName="w-72"
+            />
 
-              <AnimatePresence>
-                {isServicesOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 8 }}
-                    className="absolute right-0 top-full mt-4 w-72 rounded-2xl border border-church-gold/15 bg-white p-2 shadow-[0_18px_50px_rgba(26,26,26,0.12)]"
-                  >
-                    {serviceItems.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => navigateTo(item.id)}
-                        className={`block w-full rounded-xl px-4 py-3 text-left text-sm font-medium uppercase tracking-[0.18em] transition-colors ${
-                          activePage === item.id
-                            ? "bg-church-gold/10 text-church-gold"
-                            : "text-church-dark/70 hover:bg-church-cream hover:text-church-dark"
-                        }`}
-                      >
-                        {item.name}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {secondaryNavItems.map((item) => (
-              <button
+            {SECONDARY_NAV_ITEMS.map((item) => (
+              <DesktopNavButton
                 key={item.id}
+                item={item}
+                active={activePage === item.id}
                 onClick={() => navigateTo(item.id)}
-                className={`text-sm font-medium tracking-widest uppercase transition-colors hover:text-church-gold ${
-                  activePage === item.id ? "text-church-gold border-b border-church-gold" : "text-church-dark/70"
-                }`}
-              >
-                {item.name}
-              </button>
+              />
             ))}
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
-            <button
+            <AppButton
+              type="button"
+              buttonMotion="icon"
               onClick={() => {
                 if (isOpen) {
-                  setIsAboutOpen(false);
-                  setIsServicesOpen(false);
+                  setOpenDropdown(null);
                 }
-                setIsOpen(!isOpen);
+
+                setIsOpen((current) => !current);
               }}
-              className="text-church-dark hover:text-church-gold transition-colors"
+              className="rounded-full p-2 text-church-dark hover:text-church-gold"
+              aria-expanded={isOpen}
+              aria-label={isOpen ? "Tutup menu" : "Buka menu"}
             >
               {isOpen ? <X size={28} /> : <Menu size={28} />}
-            </button>
+            </AppButton>
           </div>
         </div>
       </div>
 
-      {/* Mobile Nav */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -214,130 +354,51 @@ export default function Navbar({ activePage, setActivePage }: { activePage: stri
             className="md:hidden bg-church-cream border-b border-church-gold/20"
           >
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              {basicNavItems.slice(0, 1).map((item) => (
-                <button
+              {BASIC_NAV_ITEMS.slice(0, 1).map((item) => (
+                <MobileNavButton
                   key={item.id}
-                  onClick={() => {
-                    navigateTo(item.id);
-                  }}
-                  className={`block w-full text-left px-3 py-4 text-base font-medium uppercase tracking-widest ${
-                    activePage === item.id ? "text-church-gold bg-church-gold/5" : "text-church-dark/70"
-                  }`}
-                >
-                  {item.name}
-                </button>
+                  item={item}
+                  active={activePage === item.id}
+                  onClick={() => navigateTo(item.id)}
+                />
               ))}
 
-              <div className="rounded-2xl border border-church-gold/10 bg-white/60">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAboutOpen((current) => !current);
-                    setIsServicesOpen(false);
-                  }}
-                  className={`flex w-full items-center justify-between px-3 py-4 text-left text-base font-medium uppercase tracking-widest ${
-                    isAboutActive ? "text-church-gold" : "text-church-dark/70"
-                  }`}
-                >
-                  <span>Tentang</span>
-                  <ChevronDown size={18} className={`transition-transform ${isAboutOpen ? "rotate-180" : ""}`} />
-                </button>
+              <MobileAccordion
+                activePage={activePage}
+                active={isAboutActive}
+                isOpen={openDropdown === "about"}
+                items={ABOUT_NAV_ITEMS}
+                label="Tentang"
+                onToggle={() => toggleDropdown("about")}
+                setActivePage={navigateTo}
+              />
 
-                <AnimatePresence initial={false}>
-                  {isAboutOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden border-t border-church-gold/10"
-                    >
-                      {aboutItems.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => navigateTo(item.id)}
-                          className={`block w-full px-5 py-3 text-left text-sm font-medium uppercase tracking-[0.18em] ${
-                            activePage === item.id
-                              ? "bg-church-gold/10 text-church-gold"
-                              : "text-church-dark/70 hover:bg-church-cream"
-                          }`}
-                        >
-                          {item.name}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {basicNavItems.slice(1).map((item) => (
-                <button
+              {BASIC_NAV_ITEMS.slice(1).map((item) => (
+                <MobileNavButton
                   key={item.id}
-                  onClick={() => {
-                    navigateTo(item.id);
-                  }}
-                  className={`block w-full text-left px-3 py-4 text-base font-medium uppercase tracking-widest ${
-                    activePage === item.id ? "text-church-gold bg-church-gold/5" : "text-church-dark/70"
-                  }`}
-                >
-                  {item.name}
-                </button>
+                  item={item}
+                  active={activePage === item.id}
+                  onClick={() => navigateTo(item.id)}
+                />
               ))}
 
-              <div className="rounded-2xl border border-church-gold/10 bg-white/60">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsServicesOpen((current) => !current);
-                    setIsAboutOpen(false);
-                  }}
-                  className={`flex w-full items-center justify-between px-3 py-4 text-left text-base font-medium uppercase tracking-widest ${
-                    isServicesActive ? "text-church-gold" : "text-church-dark/70"
-                  }`}
-                >
-                  <span>Layanan</span>
-                  <ChevronDown size={18} className={`transition-transform ${isServicesOpen ? "rotate-180" : ""}`} />
-                </button>
+              <MobileAccordion
+                activePage={activePage}
+                active={isServicesActive}
+                isOpen={openDropdown === "services"}
+                items={SERVICE_NAV_ITEMS}
+                label="Layanan"
+                onToggle={() => toggleDropdown("services")}
+                setActivePage={navigateTo}
+              />
 
-                <AnimatePresence initial={false}>
-                  {isServicesOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden border-t border-church-gold/10"
-                    >
-                      {serviceItems.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => navigateTo(item.id)}
-                          className={`block w-full px-5 py-3 text-left text-sm font-medium uppercase tracking-[0.18em] ${
-                            activePage === item.id
-                              ? "bg-church-gold/10 text-church-gold"
-                              : "text-church-dark/70 hover:bg-church-cream"
-                          }`}
-                        >
-                          {item.name}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {secondaryNavItems.map((item) => (
-                <button
+              {SECONDARY_NAV_ITEMS.map((item) => (
+                <MobileNavButton
                   key={item.id}
-                  onClick={() => {
-                    navigateTo(item.id);
-                  }}
-                  className={`block w-full text-left px-3 py-4 text-base font-medium uppercase tracking-widest ${
-                    activePage === item.id ? "text-church-gold bg-church-gold/5" : "text-church-dark/70"
-                  }`}
-                >
-                  {item.name}
-                </button>
+                  item={item}
+                  active={activePage === item.id}
+                  onClick={() => navigateTo(item.id)}
+                />
               ))}
             </div>
           </motion.div>

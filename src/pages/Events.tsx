@@ -5,6 +5,7 @@ import { db } from "../lib/firebase";
 import { collection, doc, onSnapshot, query, orderBy } from "firebase/firestore";
 import { getYoutubeEmbedUrl, getYoutubeWatchUrl } from "../lib/youtube";
 import AutoplayYoutubeEmbed from "../components/AutoplayYoutubeEmbed";
+import AppButton from "../components/ui/AppButton";
 
 interface Event {
   id: number | string;
@@ -137,13 +138,13 @@ export default function Events() {
                   Detail Event
                 </a>
               ) : (
-                <button
+                <AppButton
                   type="button"
                   disabled
                   className="bg-church-dark/30 text-church-cream px-8 py-4 rounded-full font-medium tracking-widest uppercase whitespace-nowrap cursor-not-allowed"
                 >
                   Detail Event
-                </button>
+                </AppButton>
               )}
             </motion.div>
             );

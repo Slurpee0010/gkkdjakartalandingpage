@@ -1,5 +1,7 @@
 import { motion } from "motion/react";
 import { ArrowRight, HeartHandshake, Sparkles, Users, CheckCircle2 } from "lucide-react";
+import AppButton from "../components/ui/AppButton";
+import type { NavigateToPage } from "../lib/navigation";
 
 const blessingPoints = [
   "Komunitas yang menolong Anda mengenal Tuhan lebih dalam lewat firman dan doa bersama.",
@@ -28,7 +30,7 @@ const journeySteps = [
   "Bertumbuh menjadi pribadi yang siap melayani dan memberkati lingkungan sekitar.",
 ];
 
-export default function BlessComn({ setActivePage }: { setActivePage: (page: string) => void }) {
+export default function BlessComn({ setActivePage }: { setActivePage: NavigateToPage }) {
   return (
     <div className="pt-28 pb-24 px-4">
       <div className="max-w-7xl mx-auto space-y-10">
@@ -47,21 +49,21 @@ export default function BlessComn({ setActivePage }: { setActivePage: (page: str
                 BlessComn adalah komunitas sel yang menolong setiap orang untuk bertumbuh dalam iman, membangun relasi yang sehat, dan mengalami perjalanan rohani yang nyata bersama keluarga Allah.
               </p>
               <div className="flex flex-wrap gap-4">
-                <button
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("contact")}
                   className="inline-flex items-center gap-3 rounded-full bg-church-gold px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-church-dark transition-transform hover:-translate-y-0.5"
                 >
                   Gabung BlessComn
                   <ArrowRight size={16} />
-                </button>
-                <button
+                </AppButton>
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("services")}
                   className="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/85 transition-colors hover:bg-white/10"
                 >
                   Kembali ke Layanan
-                </button>
+                </AppButton>
               </div>
             </div>
 

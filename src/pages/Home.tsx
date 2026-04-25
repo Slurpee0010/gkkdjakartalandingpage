@@ -25,9 +25,11 @@ import {
 } from "../lib/worshipSchedules";
 import { doc, onSnapshot } from "firebase/firestore";
 import { getYoutubeEmbedUrl, getYoutubeWatchUrl } from "../lib/youtube";
+import AppButton from "../components/ui/AppButton";
+import type { NavigateToPage, PageId } from "../lib/navigation";
 
 interface HomeProps {
-  setActivePage: (page: string) => void;
+  setActivePage: NavigateToPage;
 }
 
 interface HeroSlide {
@@ -40,7 +42,7 @@ interface HeroSlide {
 }
 
 interface IntentCard {
-  id: string;
+  id: PageId;
   title: string;
   description: string;
 }
@@ -52,7 +54,7 @@ interface SatelliteCard {
 }
 
 interface QuickLink {
-  id: string;
+  id: PageId;
   title: string;
   description: string;
   icon: LucideIcon;
@@ -108,6 +110,12 @@ const quickLinks: QuickLink[] = [
   { id: "services", title: "Layanan", description: "Lihat berbagai pelayanan yang menemani pertumbuhan rohani.", icon: HeartHandshake },
   { id: "events", title: "Event", description: "Cek agenda terbaru yang bisa Anda ikuti bersama jemaat.", icon: Sparkles },
   { id: "contact", title: "Kontak", description: "Hubungi tim GKKD Jakarta untuk pertanyaan atau bantuan awal.", icon: PhoneCall },
+];
+
+const exploreLinks: Array<{ label: string; page: PageId; icon: LucideIcon }> = [
+  { label: "Mulai dari Ibadah", page: "worship", icon: CalendarClock },
+  { label: "Masuk ke BlessComn", page: "blesscomn", icon: Users },
+  { label: "Lihat Pelayanan Misi", page: "mission", icon: Compass },
 ];
 
 export default function Home({ setActivePage }: HomeProps) {
@@ -215,30 +223,31 @@ export default function Home({ setActivePage }: HomeProps) {
                 </motion.div>
 
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                  <button
+                  <AppButton
                     type="button"
                     onClick={() => setActivePage("worship")}
                     className="inline-flex items-center justify-center gap-3 rounded-full bg-white px-7 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-church-dark transition-colors hover:bg-church-gold"
                   >
                     Temukan Jadwal Ibadah
                     <ArrowRight size={16} />
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
                     onClick={() => setActivePage("about")}
                     className="inline-flex items-center justify-center gap-3 rounded-full border border-white/15 bg-white/8 px-7 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/14"
                   >
                     Kenali GKKD Lebih Dekat
-                  </button>
+                  </AppButton>
                 </div>
               </div>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   {heroSlides.map((slide, index) => (
-                    <button
+                    <AppButton
                       key={slide.id}
                       type="button"
+                      buttonMotion="icon"
                       onClick={() => setActiveHeroIndex(index)}
                       className={`h-2.5 rounded-full transition-all ${index === activeHeroIndex ? "w-10 bg-church-gold" : "w-2.5 bg-white/35"}`}
                       aria-label={`Buka slide ${index + 1}`}
@@ -247,22 +256,24 @@ export default function Home({ setActivePage }: HomeProps) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button
+                  <AppButton
                     type="button"
+                    buttonMotion="icon"
                     onClick={() => setActiveHeroIndex((current) => (current - 1 + heroSlides.length) % heroSlides.length)}
                     className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white transition-colors hover:bg-white/14"
                     aria-label="Slide sebelumnya"
                   >
                     <ChevronLeft size={18} />
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
+                    buttonMotion="icon"
                     onClick={() => setActiveHeroIndex((current) => (current + 1) % heroSlides.length)}
                     className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white transition-colors hover:bg-white/14"
                     aria-label="Slide berikutnya"
                   >
                     <ChevronRight size={18} />
-                  </button>
+                  </AppButton>
                 </div>
               </div>
             </div>
@@ -288,21 +299,21 @@ export default function Home({ setActivePage }: HomeProps) {
               </p>
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                <button
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("worship")}
                   className="inline-flex items-center justify-center gap-3 rounded-full bg-church-dark px-8 py-4 text-sm font-semibold uppercase tracking-[0.22em] text-church-cream transition-all hover:bg-church-gold hover:text-church-dark"
                 >
                   Temukan Jadwal Ibadah
                   <ArrowRight size={18} />
-                </button>
-                <button
+                </AppButton>
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("mission")}
                   className="inline-flex items-center justify-center gap-3 rounded-full border border-church-dark/12 bg-white/90 px-8 py-4 text-sm font-semibold uppercase tracking-[0.22em] text-church-dark transition-colors hover:border-church-gold/40 hover:text-church-gold"
                 >
                   Lihat Pelayanan Misi
-                </button>
+                </AppButton>
               </div>
             </div>
           </div>
@@ -317,13 +328,13 @@ export default function Home({ setActivePage }: HomeProps) {
                 <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">
                   Temukan lokasi ibadah, jam pelayanan, dan contact person untuk langkah pertama Anda di GKKD Jakarta.
                 </p>
-                <button
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("worship")}
                   className="mt-6 inline-flex w-fit items-center gap-3 rounded-full bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-church-dark transition-colors hover:bg-church-gold"
                 >
                   Buka Jadwal
-                </button>
+                </AppButton>
               </div>
             </article>
 
@@ -337,13 +348,13 @@ export default function Home({ setActivePage }: HomeProps) {
                   <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">
                     Kalau Anda ingin lebih dari sekadar hadir, BlessComn adalah tempat untuk terhubung, bertumbuh, dan saling menguatkan.
                   </p>
-                  <button
+                  <AppButton
                     type="button"
                     onClick={() => setActivePage("blesscomn")}
                     className="mt-6 inline-flex w-fit items-center gap-3 rounded-full bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-church-dark transition-colors hover:bg-church-gold"
                   >
                     Selengkapnya
-                  </button>
+                  </AppButton>
                 </div>
               </div>
             </article>
@@ -362,9 +373,10 @@ export default function Home({ setActivePage }: HomeProps) {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {intentCards.map((card, index) => (
-              <motion.button
+              <AppButton
                 key={card.id}
                 type="button"
+                buttonMotion="card"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -379,7 +391,7 @@ export default function Home({ setActivePage }: HomeProps) {
                   Jelajahi
                   <ArrowRight size={16} />
                 </span>
-              </motion.button>
+              </AppButton>
             ))}
           </div>
         </div>
@@ -442,13 +454,13 @@ export default function Home({ setActivePage }: HomeProps) {
             <ArrowRight size={16} />
           </a>
 
-          <button
+          <AppButton
             type="button"
             onClick={() => setActivePage("events")}
             className="inline-flex items-center justify-center gap-3 rounded-full border border-church-dark/12 bg-white px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-church-dark transition-colors hover:border-church-gold/40 hover:text-church-gold"
           >
             Lihat Semua Event
-          </button>
+          </AppButton>
         </div>
       </div>
     </div>
@@ -474,9 +486,10 @@ export default function Home({ setActivePage }: HomeProps) {
             <div className="overflow-x-auto pb-2">
               <div className="flex gap-4">
                 {satelliteCards.map((card, index) => (
-                  <motion.button
+                  <AppButton
                     key={card.satellite}
                     type="button"
+                    buttonMotion="card"
                     initial={{ opacity: 0, x: 16 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
@@ -495,7 +508,7 @@ export default function Home({ setActivePage }: HomeProps) {
                       <h3 className="serif mt-3 text-3xl font-bold uppercase">{card.title}</h3>
                       <p className="mt-2 text-sm leading-relaxed text-white/78">{card.description}</p>
                     </div>
-                  </motion.button>
+                  </AppButton>
                 ))}
               </div>
             </div>
@@ -515,9 +528,10 @@ export default function Home({ setActivePage }: HomeProps) {
                 const Icon = item.icon;
 
                 return (
-                  <button
+                  <AppButton
                     key={item.id}
                     type="button"
+                    buttonMotion="card"
                     onClick={() => setActivePage(item.id)}
                     className="flex items-start gap-4 rounded-[1.6rem] border border-church-gold/10 bg-church-cream p-5 text-left transition-colors hover:border-church-gold/35"
                   >
@@ -528,7 +542,7 @@ export default function Home({ setActivePage }: HomeProps) {
                       <h3 className="text-lg font-semibold text-church-dark">{item.title}</h3>
                       <p className="mt-2 text-sm leading-relaxed text-church-dark/60">{item.description}</p>
                     </div>
-                  </button>
+                  </AppButton>
                 );
               })}
             </div>
@@ -543,17 +557,14 @@ export default function Home({ setActivePage }: HomeProps) {
               Kalau Anda siap menelusuri lebih jauh, pilih jalur yang paling sesuai: ibadah, komunitas, misi, event, atau kontak langsung dengan tim kami.
             </p>
             <div className="mt-8 grid gap-3">
-              {[
-                { label: "Mulai dari Ibadah", page: "worship", icon: CalendarClock },
-                { label: "Masuk ke BlessComn", page: "blesscomn", icon: Users },
-                { label: "Lihat Pelayanan Misi", page: "mission", icon: Compass },
-              ].map((item) => {
+              {exploreLinks.map((item) => {
                 const Icon = item.icon;
 
                 return (
-                  <button
+                  <AppButton
                     key={item.page}
                     type="button"
+                    buttonMotion="lift"
                     onClick={() => setActivePage(item.page)}
                     className="flex items-center justify-between rounded-[1.6rem] border border-white/10 bg-white/8 px-5 py-4 text-left transition-colors hover:bg-white/12"
                   >
@@ -562,7 +573,7 @@ export default function Home({ setActivePage }: HomeProps) {
                       {item.label}
                     </span>
                     <ArrowRight size={16} className="text-white/70" />
-                  </button>
+                  </AppButton>
                 );
               })}
             </div>

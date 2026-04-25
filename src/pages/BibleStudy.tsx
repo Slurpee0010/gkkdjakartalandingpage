@@ -7,9 +7,11 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import AppButton from "../components/ui/AppButton";
+import type { NavigateToPage } from "../lib/navigation";
 
 interface BibleStudyProps {
-  setActivePage: (page: string) => void;
+  setActivePage: NavigateToPage;
 }
 
 interface StudyBook {
@@ -33,7 +35,7 @@ const studyBooks: StudyBook[] = [
     description:
       "Materi awal untuk membangun fondasi iman, mengenal Kristus lebih dalam, dan mulai bertumbuh dengan arah yang jelas.",
     imageSrc: "/img/4mt.jpg",
-    purchaseUrl: "https://shopee.co.id/search?keyword=4MT%20buku",
+    purchaseUrl: "https://shopee.co.id/Buku-PA-i.822473929.57455802179?extraParams=%7B%22display_model_id%22%3A297386974957%2C%22model_selection_logic%22%3A3%7D",
   },
   {
     title: "SOM",
@@ -41,7 +43,7 @@ const studyBooks: StudyBook[] = [
     description:
       "Bahan belajar yang menolong kelompok kecil menggali kebenaran firman Tuhan dengan diskusi yang praktis dan membangun.",
     imageSrc: "/img/som.jpg",
-    purchaseUrl: "https://shopee.co.id/search?keyword=SOM%20buku",
+    purchaseUrl: "https://shopee.co.id/Buku-PA-i.822473929.57455802179?extraParams=%7B%22display_model_id%22%3A297386974957%2C%22model_selection_logic%22%3A3%7D",
   },
   {
     title: "SOD 1",
@@ -49,7 +51,7 @@ const studyBooks: StudyBook[] = [
     description:
       "Dipakai untuk membawa peserta melangkah lebih jauh dalam pemuridan, ketaatan, dan penerapan firman secara konsisten.",
     imageSrc: "/img/sod1.jpg",
-    purchaseUrl: "https://shopee.co.id/search?keyword=SOD%201%20buku",
+    purchaseUrl: "https://shopee.co.id/Buku-PA-i.822473929.57455802179?extraParams=%7B%22display_model_id%22%3A297386974957%2C%22model_selection_logic%22%3A3%7D",
   },
   {
     title: "SOD 2",
@@ -57,7 +59,7 @@ const studyBooks: StudyBook[] = [
     description:
       "Materi lanjutan yang membantu peserta bertumbuh dewasa, siap memuridkan, dan hidup sebagai murid Kristus yang aktif.",
     imageSrc: "/img/sod2.jpg",
-    purchaseUrl: "https://shopee.co.id/search?keyword=SOD%202%20buku",
+    purchaseUrl: "https://shopee.co.id/Buku-PA-i.822473929.57455802179?extraParams=%7B%22display_model_id%22%3A297386974957%2C%22model_selection_logic%22%3A3%7D",
   },
 ];
 
@@ -97,21 +99,21 @@ export default function BibleStudy({ setActivePage }: BibleStudyProps) {
                 terhubung dalam komunitas, dan makin mengenal Kristus.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <button
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("contact")}
                   className="inline-flex items-center gap-3 rounded-full bg-church-gold px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-church-dark transition-transform hover:-translate-y-0.5"
                 >
                   Gabung Kelompok
                   <ArrowRight size={16} />
-                </button>
-                <button
+                </AppButton>
+                <AppButton
                   type="button"
                   onClick={() => setActivePage("services")}
                   className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-church-cream/85 transition-colors hover:bg-white/10"
                 >
                   Kembali ke Layanan
-                </button>
+                </AppButton>
               </div>
             </div>
 

@@ -16,6 +16,7 @@ import { collection, addDoc, getDoc, getDocs, deleteDoc, doc, query, orderBy, se
 import { Pencil, Plus, Trash2, LogIn, LogOut, Loader2, X } from "lucide-react";
 import WorshipScheduleAdmin from "../components/WorshipScheduleAdmin";
 import { getYoutubeEmbedUrl, getYoutubeWatchUrl, isYoutubeVideoUrl } from "../lib/youtube";
+import AppButton from "../components/ui/AppButton";
 
 interface EventItem {
   id: number | string;
@@ -460,22 +461,24 @@ export default function Admin() {
           )}
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button
+            <AppButton
+              type="button"
               onClick={login}
               disabled={loginLoading}
               className="bg-church-dark text-church-cream px-8 py-4 rounded-full font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-church-gold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loginLoading ? <Loader2 className="animate-spin" size={20} /> : <LogIn size={20} />}
               {loginLoading ? "Memproses Login..." : "Login with Google"}
-            </button>
+            </AppButton>
 
             {user && (
-              <button
+              <AppButton
+                type="button"
                 onClick={logout}
                 className="border border-church-dark/15 text-church-dark px-8 py-4 rounded-full font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:border-red-200 hover:text-red-500 transition-colors"
               >
                 <LogOut size={20} /> Logout
-              </button>
+              </AppButton>
             )}
           </div>
 
@@ -494,9 +497,9 @@ export default function Admin() {
           <h2 className="serif text-4xl font-bold uppercase">CMS Dashboard</h2>
           <p className="text-sm uppercase tracking-widest text-church-dark/50 mt-2">{user.email}</p>
         </div>
-        <button onClick={logout} className="text-church-dark/60 hover:text-red-500 flex items-center gap-2 uppercase text-sm font-bold tracking-widest">
+        <AppButton type="button" onClick={logout} className="text-church-dark/60 hover:text-red-500 flex items-center gap-2 uppercase text-sm font-bold tracking-widest">
           <LogOut size={18} /> Logout
-        </button>
+        </AppButton>
       </div>
 
       {dataError && (
@@ -512,24 +515,33 @@ export default function Admin() {
       )}
 
       <div className="flex gap-8 mb-12 border-b border-church-gold/20">
-        <button
+        <AppButton
+          type="button"
+          buttonMotion="nav"
+          active={activeTab === "events"}
           onClick={() => setActiveTab("events")}
           className={`pb-4 uppercase text-sm font-bold tracking-widest transition-colors ${activeTab === "events" ? "text-church-gold border-b-2 border-church-gold" : "text-church-dark/40"}`}
         >
           Events & Jadwal
-        </button>
-        <button
+        </AppButton>
+        <AppButton
+          type="button"
+          buttonMotion="nav"
+          active={activeTab === "services"}
           onClick={() => setActiveTab("services")}
           className={`pb-4 uppercase text-sm font-bold tracking-widest transition-colors ${activeTab === "services" ? "text-church-gold border-b-2 border-church-gold" : "text-church-dark/40"}`}
         >
           Layanan
-        </button>
-        <button
+        </AppButton>
+        <AppButton
+          type="button"
+          buttonMotion="nav"
+          active={activeTab === "worship"}
           onClick={() => setActiveTab("worship")}
           className={`pb-4 uppercase text-sm font-bold tracking-widest transition-colors ${activeTab === "worship" ? "text-church-gold border-b-2 border-church-gold" : "text-church-dark/40"}`}
         >
           Jadwal Ibadah
-        </button>
+        </AppButton>
       </div>
 
       {activeTab === "events" ? (
@@ -539,13 +551,13 @@ export default function Admin() {
               <div className="flex items-start justify-between gap-4">
                 <h3 className="serif text-xl font-bold uppercase mb-4">{editingEventId ? "Edit Event" : "Tambah Event"}</h3>
                 {editingEventId && (
-                  <button
+                  <AppButton
                     type="button"
                     onClick={resetEventForm}
                     className="text-sm uppercase tracking-widest text-church-dark/50 hover:text-church-dark flex items-center gap-2"
                   >
                     <X size={16} /> Batal
-                  </button>
+                  </AppButton>
                 )}
               </div>
               <input
@@ -602,13 +614,14 @@ export default function Admin() {
                 onChange={(e) => setEventForm({ ...eventForm, registrationLink: e.target.value })}
                 required
               />
-              <button
+              <AppButton
+                type="submit"
                 disabled={saving}
                 className="w-full bg-church-gold text-church-cream py-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {saving ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
                 {saving ? "Menyimpan..." : editingEventId ? "Update Event" : "Simpan Event"}
-              </button>
+              </AppButton>
             </form>
 
             <form onSubmit={handleSubmitOnlineWorshipVideo} className="bg-white p-8 rounded-3xl border border-church-gold/10 space-y-6">
@@ -647,13 +660,14 @@ export default function Admin() {
                 </div>
               )}
 
-              <button
+              <AppButton
+                type="submit"
                 disabled={videoSaving}
                 className="w-full bg-church-dark text-church-cream py-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:bg-church-gold transition-colors"
               >
                 {videoSaving ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
                 {videoSaving ? "Menyimpan..." : "Simpan Link Video"}
-              </button>
+              </AppButton>
             </form>
           </div>
           <div className="lg:col-span-2 space-y-4">
@@ -672,21 +686,23 @@ export default function Admin() {
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
+                  <AppButton
                     type="button"
+                    buttonMotion="icon"
                     onClick={() => handleEditEvent(event)}
                     className="text-church-dark/60 hover:bg-church-gold/10 hover:text-church-gold p-2 rounded-lg transition-colors"
                   >
                     <Pencil size={18} />
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
+                    buttonMotion="icon"
                     disabled={deletingKey === `events:${String(event.id)}`}
                     onClick={() => handleDelete("events", String(event.id))}
                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {deletingKey === `events:${String(event.id)}` ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
-                  </button>
+                  </AppButton>
                 </div>
               </div>
             ))}
@@ -699,13 +715,13 @@ export default function Admin() {
               <div className="flex items-start justify-between gap-4">
                 <h3 className="serif text-xl font-bold uppercase mb-4">{editingServiceId ? "Edit Layanan" : "Tambah Layanan"}</h3>
                 {editingServiceId && (
-                  <button
+                  <AppButton
                     type="button"
                     onClick={resetServiceForm}
                     className="text-sm uppercase tracking-widest text-church-dark/50 hover:text-church-dark flex items-center gap-2"
                   >
                     <X size={16} /> Batal
-                  </button>
+                  </AppButton>
                 )}
               </div>
               <input
@@ -723,13 +739,14 @@ export default function Admin() {
                 onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
                 required
               />
-              <button
+              <AppButton
+                type="submit"
                 disabled={saving}
                 className="w-full bg-church-gold text-church-cream py-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {saving ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
                 {saving ? "Menyimpan..." : editingServiceId ? "Update Layanan" : "Simpan Layanan"}
-              </button>
+              </AppButton>
             </form>
           </div>
           <div className="lg:col-span-2 space-y-4">
@@ -740,21 +757,23 @@ export default function Admin() {
                   <p className="text-sm text-church-dark/60 line-clamp-1">{service.description}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
+                  <AppButton
                     type="button"
+                    buttonMotion="icon"
                     onClick={() => handleEditService(service)}
                     className="text-church-dark/60 hover:bg-church-gold/10 hover:text-church-gold p-2 rounded-lg transition-colors"
                   >
                     <Pencil size={18} />
-                  </button>
-                  <button
+                  </AppButton>
+                  <AppButton
                     type="button"
+                    buttonMotion="icon"
                     disabled={deletingKey === `services:${String(service.id)}`}
                     onClick={() => handleDelete("services", String(service.id))}
                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {deletingKey === `services:${String(service.id)}` ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
-                  </button>
+                  </AppButton>
                 </div>
               </div>
             ))}

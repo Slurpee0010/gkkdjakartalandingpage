@@ -5,9 +5,11 @@ import {
   WORSHIP_TARGET_STORAGE_KEY,
   type SatelliteOption,
 } from "../lib/worshipSchedules";
+import type { NavigateToPage } from "../lib/navigation";
+import AppButton from "./ui/AppButton";
 
 interface FooterProps {
-  setActivePage: (page: string) => void;
+  setActivePage: NavigateToPage;
 }
 
 export default function Footer({ setActivePage }: FooterProps) {
@@ -65,14 +67,15 @@ export default function Footer({ setActivePage }: FooterProps) {
           <ul className="space-y-3 text-church-cream/70">
             {SATELLITE_OPTIONS.map((satellite) => (
               <li key={satellite}>
-                <button
+                <AppButton
                   type="button"
+                  buttonMotion="lift"
                   onClick={() => handleSatelliteClick(satellite)}
                   className="flex w-full items-center justify-between rounded-2xl border border-church-cream/10 bg-white/5 px-4 py-3 text-left transition-all hover:border-church-gold/50 hover:bg-white/10 hover:text-church-cream"
                 >
                   <span>{satellite}</span>
                   <span className="text-xs uppercase tracking-[0.22em] text-church-gold">Lihat</span>
-                </button>
+                </AppButton>
               </li>
             ))}
           </ul>

@@ -24,6 +24,7 @@ import {
   type WorshipCategory,
   type WorshipScheduleItem,
 } from "../lib/worshipSchedules";
+import AppButton from "./ui/AppButton";
 
 type WorshipFormState = {
   satellite: SatelliteOption | "";
@@ -260,13 +261,13 @@ export default function WorshipScheduleAdmin() {
               </p>
             </div>
             {editingId && (
-              <button
+              <AppButton
                 type="button"
                 onClick={resetForm}
                 className="text-sm uppercase tracking-widest text-church-dark/50 hover:text-church-dark flex items-center gap-2"
               >
                 <X size={16} /> Batal
-              </button>
+              </AppButton>
             )}
           </div>
 
@@ -368,27 +369,28 @@ export default function WorshipScheduleAdmin() {
               required
             />
 
-            <button
+            <AppButton
+              type="submit"
               disabled={saving}
               className="w-full bg-church-gold text-church-cream py-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {saving ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
               {saving ? "Menyimpan..." : editingId ? "Update Jadwal Ibadah" : "Simpan Jadwal Ibadah"}
-            </button>
+            </AppButton>
           </form>
         </div>
 
         {schedules.length === 0 && (
           <div className="rounded-[2rem] border border-church-gold/10 bg-[linear-gradient(135deg,rgba(26,26,26,0.96),rgba(52,39,22,0.92))] p-8 text-church-cream">
             <h4 className="serif text-2xl font-bold uppercase mb-3">Muat Data Awal</h4>
-            <button
+            <AppButton
               type="button"
               disabled={seeding}
               onClick={seedDefaults}
               className="rounded-full border border-church-gold/30 bg-white/10 px-5 py-3 text-sm uppercase tracking-widest text-church-cream hover:bg-church-gold hover:text-church-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {seeding ? "Memuat Data Awal..." : "Muat Data Awal ke Firebase"}
-            </button>
+            </AppButton>
           </div>
         )}
       </div>
@@ -436,21 +438,23 @@ export default function WorshipScheduleAdmin() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
+                    <AppButton
                       type="button"
+                      buttonMotion="icon"
                       onClick={() => handleEdit(item)}
                       className="text-church-dark/60 hover:bg-church-gold/10 hover:text-church-gold p-2 rounded-lg transition-colors"
                     >
                       <Pencil size={18} />
-                    </button>
-                    <button
+                    </AppButton>
+                    <AppButton
                       type="button"
+                      buttonMotion="icon"
                       disabled={deletingId === item.id}
                       onClick={() => handleDelete(item)}
                       className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {deletingId === item.id ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
-                    </button>
+                    </AppButton>
                   </div>
                 </div>
 

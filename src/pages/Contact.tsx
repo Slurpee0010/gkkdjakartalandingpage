@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
+import AppButton from "../components/ui/AppButton";
 
 export default function Contact() {
   return (
@@ -88,9 +89,12 @@ export default function Contact() {
                   placeholder="Tuliskan pesan Anda di sini..."
                 />
               </div>
-              <button className="w-full bg-church-dark text-church-cream py-6 rounded-2xl font-bold tracking-[0.2em] uppercase hover:bg-church-gold transition-all flex items-center justify-center gap-3 group">
+              <AppButton
+                type="submit"
+                className="w-full bg-church-dark text-church-cream py-6 rounded-2xl font-bold tracking-[0.2em] uppercase hover:bg-church-gold transition-all flex items-center justify-center gap-3 group"
+              >
                 Kirim Pesan <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-              </button>
+              </AppButton>
             </form>
           </motion.div>
         </div>
