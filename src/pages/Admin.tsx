@@ -2,21 +2,41 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { FirebaseError } from "firebase/app";
 import { auth, db } from "../lib/firebase";
 import {
-  GoogleAuthProvider,
   browserLocalPersistence,
-  getRedirectResult,
   onAuthStateChanged,
   setPersistence,
-  signInWithPopup,
-  signInWithRedirect,
+  signInWithEmailAndPassword,
   signOut,
   type User,
 } from "firebase/auth";
-import { collection, addDoc, getDoc, getDocs, deleteDoc, doc, query, orderBy, setDoc, updateDoc } from "firebase/firestore";
-import { Pencil, Plus, Trash2, LogIn, LogOut, Loader2, X } from "lucide-react";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
+import { Loader2, LogIn, LogOut, Pencil, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import WorshipScheduleAdmin from "../components/WorshipScheduleAdmin";
-import { getYoutubeEmbedUrl, getYoutubeWatchUrl, isYoutubeVideoUrl } from "../lib/youtube";
 import AppButton from "../components/ui/AppButton";
+import {
+  ADMIN_USERS_COLLECTION,
+  DEFAULT_SUPERADMIN_EMAIL,
+  type AdminUserProfile,
+  createEmailPasswordUser,
+  fetchAdminProfile,
+  getAdminProvisionErrorMessage,
+  hasAdminAccess,
+  isSuperadminProfile,
+  normalizeAdminEmail,
+  upsertAdminProfile,
+} from "../lib/adminAuth";
+import { getYoutubeEmbedUrl, getYoutubeWatchUrl, isYoutubeVideoUrl } from "../lib/youtube";
 
 interface EventItem {
   id: number | string;
@@ -38,40 +58,41 @@ interface OnlineWorshipVideoSetting {
   updatedAt?: string;
 }
 
+interface AdminUserListItem extends AdminUserProfile {
+  id: string;
+}
+
 type CollectionName = "events" | "services";
 
 const EMPTY_EVENT_FORM = { title: "", date: "", time: "", location: "", registrationLink: "" };
 const EMPTY_SERVICE_FORM = { title: "", description: "" };
 const EMPTY_ONLINE_WORSHIP_FORM = { youtubeUrl: "" };
+const EMPTY_LOGIN_FORM = { email: "", password: "" };
+const EMPTY_ADMIN_USER_FORM = { email: "", password: "" };
 const EVENT_LOCATION_OPTIONS = ["Pakuwon Tower Lantai 3", "Pakuwon Tower Lantai 2"] as const;
 const OTHER_LOCATION_OPTION = "__other__";
 const ONLINE_WORSHIP_VIDEO_DOC_ID = "onlineWorshipVideo";
-
-const ADMIN_EMAILS = new Set(["gkkdjak@gmail.com"]);
-
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
-
-function isAdminEmail(email?: string | null) {
-  return !!email && ADMIN_EMAILS.has(email.trim().toLowerCase());
-}
 
 function getAuthErrorMessage(error: unknown) {
   const firebaseError = error as FirebaseError;
 
   switch (firebaseError?.code) {
-    case "auth/popup-closed-by-user":
-      return "Popup login ditutup sebelum proses selesai.";
-    case "auth/popup-blocked":
-      return "Popup login diblokir oleh browser.";
-    case "auth/unauthorized-domain":
-      return "Domain localhost belum diizinkan di Firebase Authentication.";
+    case "auth/invalid-email":
+      return "Format email tidak valid.";
+    case "auth/invalid-credential":
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+      return "Email atau password salah.";
+    case "auth/user-disabled":
+      return "Akun ini sedang dinonaktifkan.";
     case "auth/operation-not-allowed":
-      return "Google Sign-In belum diaktifkan di Firebase Authentication.";
-    case "auth/operation-not-supported-in-this-environment":
-      return "Browser ini tidak mendukung popup login Google.";
+      return "Email/password belum diaktifkan di Firebase Authentication.";
+    case "auth/too-many-requests":
+      return "Terlalu banyak percobaan login. Coba lagi beberapa saat lagi.";
+    case "auth/network-request-failed":
+      return "Koneksi ke Firebase gagal. Cek internet lalu coba lagi.";
     default:
-      return "Login Google gagal. Periksa konfigurasi Firebase Authentication lalu coba lagi.";
+      return "Login admin gagal. Periksa konfigurasi Firebase Authentication lalu coba lagi.";
   }
 }
 
@@ -80,7 +101,7 @@ function getDataErrorMessage(error: unknown, fallbackMessage: string) {
 
   switch (firebaseError?.code) {
     case "permission-denied":
-      return "Akses Firestore ditolak. Pastikan rules sudah terdeploy ke database yang benar dan akun login adalah admin terverifikasi.";
+      return "Akses Firestore ditolak. Pastikan rules sudah terdeploy ke database yang benar dan akun login memiliki role admin atau superadmin.";
     case "not-found":
       return "Dokumen yang ingin diubah sudah tidak ditemukan di Firestore.";
     case "unauthenticated":
@@ -128,26 +149,31 @@ function formatEventTime(time: string) {
 
 export default function Admin() {
   const [user, setUser] = useState<User | null>(null);
+  const [adminProfile, setAdminProfile] = useState<AdminUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [videoSaving, setVideoSaving] = useState(false);
+  const [adminSaving, setAdminSaving] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUserListItem[]>([]);
   const [onlineWorshipVideo, setOnlineWorshipVideo] = useState<OnlineWorshipVideoSetting>(EMPTY_ONLINE_WORSHIP_FORM);
-  const [activeTab, setActiveTab] = useState<"events" | "services" | "worship">("events");
+  const [activeTab, setActiveTab] = useState<"events" | "services" | "worship" | "users">("events");
   const [authError, setAuthError] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [eventLocationOption, setEventLocationOption] = useState<string>("");
-
+  const [loginForm, setLoginForm] = useState(EMPTY_LOGIN_FORM);
+  const [adminUserForm, setAdminUserForm] = useState(EMPTY_ADMIN_USER_FORM);
   const [eventForm, setEventForm] = useState(EMPTY_EVENT_FORM);
   const [serviceForm, setServiceForm] = useState(EMPTY_SERVICE_FORM);
 
-  const hasAdminAccess = isAdminEmail(user?.email);
+  const canAccessAdmin = hasAdminAccess(adminProfile);
+  const isSuperadmin = isSuperadminProfile(adminProfile);
 
   const resetEventForm = () => {
     setEditingEventId(null);
@@ -160,7 +186,11 @@ export default function Admin() {
     setServiceForm(EMPTY_SERVICE_FORM);
   };
 
-  const fetchData = async () => {
+  const resetAdminUserForm = () => {
+    setAdminUserForm(EMPTY_ADMIN_USER_FORM);
+  };
+
+  const fetchData = async (nextAdminProfile: AdminUserProfile | null = adminProfile) => {
     try {
       setDataError(null);
 
@@ -175,6 +205,23 @@ export default function Admin() {
       setOnlineWorshipVideo({
         youtubeUrl: (onlineWorshipSnap.data() as OnlineWorshipVideoSetting | undefined)?.youtubeUrl ?? "",
       });
+
+      if (isSuperadminProfile(nextAdminProfile)) {
+        const adminUsersSnap = await getDocs(query(collection(db, ADMIN_USERS_COLLECTION), orderBy("createdAt", "desc")));
+        const items = adminUsersSnap.docs.map((item) => ({ id: item.id, ...item.data() })) as AdminUserListItem[];
+
+        setAdminUsers(
+          [...items].sort((left, right) => {
+            if (left.role !== right.role) {
+              return left.role === "superadmin" ? -1 : 1;
+            }
+
+            return right.createdAt.localeCompare(left.createdAt);
+          }),
+        );
+      } else {
+        setAdminUsers([]);
+      }
     } catch {
       setDataError("Data admin tidak berhasil dimuat. Pastikan Firestore dan rules Firebase mengizinkan akun admin.");
     }
@@ -189,44 +236,64 @@ export default function Admin() {
       }
     });
 
-    void getRedirectResult(auth)
-      .then((result) => {
-        if (!isMounted || !result?.user) {
-          return;
-        }
-
-        if (!isAdminEmail(result.user.email)) {
-          setAuthError(`Login berhasil sebagai ${result.user.email ?? "akun Google ini"}, tetapi akun tersebut belum diberi akses admin.`);
-        }
-      })
-      .catch((error) => {
-        if (isMounted) {
-          setAuthError(getAuthErrorMessage(error));
-        }
-      });
-
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
       if (!isMounted) {
         return;
       }
 
-      setUser(nextUser);
-      setLoading(false);
-      setLoginLoading(false);
+      void (async () => {
+        setUser(nextUser);
+        setLoginLoading(false);
 
-      if (!nextUser) {
-        setDataError(null);
-        return;
-      }
+        if (!nextUser) {
+          setAdminProfile(null);
+          setAdminUsers([]);
+          setDataError(null);
+          setLoading(false);
+          return;
+        }
 
-      if (!isAdminEmail(nextUser.email)) {
-        setDataError(null);
-        setAuthError(`Login berhasil sebagai ${nextUser.email ?? "akun Google ini"}, tetapi akun tersebut belum diberi akses admin.`);
-        return;
-      }
+        try {
+          const normalizedUserEmail = normalizeAdminEmail(nextUser.email ?? "");
+          let profile = await fetchAdminProfile(nextUser.uid);
 
-      setAuthError(null);
-      void fetchData();
+          if (!profile && normalizedUserEmail === DEFAULT_SUPERADMIN_EMAIL) {
+            const bootstrapProfile: AdminUserProfile = {
+              email: normalizedUserEmail,
+              role: "superadmin",
+              createdAt: new Date().toISOString(),
+            };
+
+            await upsertAdminProfile(nextUser.uid, bootstrapProfile);
+            profile = bootstrapProfile;
+            setSuccessMessage("Superadmin awal berhasil diaktifkan.");
+          }
+
+          if (!isMounted) {
+            return;
+          }
+
+          setAdminProfile(profile);
+
+          if (!hasAdminAccess(profile)) {
+            setDataError(null);
+            setAuthError(`Login berhasil sebagai ${nextUser.email ?? "akun ini"}, tetapi role admin belum terdaftar di Firestore.`);
+            setLoading(false);
+            return;
+          }
+
+          setAuthError(null);
+          await fetchData(profile);
+        } catch {
+          if (isMounted) {
+            setDataError("Profil admin tidak berhasil dimuat. Pastikan rules Firestore terbaru sudah terpasang.");
+          }
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      })();
     });
 
     return () => {
@@ -235,32 +302,26 @@ export default function Admin() {
     };
   }, []);
 
-  const login = async () => {
+  useEffect(() => {
+    if (activeTab === "users" && !isSuperadmin) {
+      setActiveTab("events");
+    }
+  }, [activeTab, isSuperadmin]);
+
+  const login = async (event: FormEvent) => {
+    event.preventDefault();
     setAuthError(null);
+    setSuccessMessage(null);
     setLoginLoading(true);
 
     try {
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithPopup(auth, googleProvider);
+      await signInWithEmailAndPassword(auth, normalizeAdminEmail(loginForm.email), loginForm.password);
     } catch (error) {
-      const firebaseError = error as FirebaseError;
-      const shouldUseRedirect =
-        firebaseError?.code === "auth/popup-blocked" ||
-        firebaseError?.code === "auth/cancelled-popup-request" ||
-        firebaseError?.code === "auth/operation-not-supported-in-this-environment";
-
-      if (shouldUseRedirect) {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        } catch (redirectError) {
-          setAuthError(getAuthErrorMessage(redirectError));
-        }
-      } else {
-        setAuthError(getAuthErrorMessage(error));
-      }
-    } finally {
+      setAuthError(getAuthErrorMessage(error));
       setLoginLoading(false);
+    } finally {
+      setLoginForm((current) => ({ ...current, password: "" }));
     }
   };
 
@@ -268,11 +329,14 @@ export default function Admin() {
     setAuthError(null);
     setDataError(null);
     setSuccessMessage(null);
+    setAdminProfile(null);
+    setAdminUsers([]);
+    setLoginForm(EMPTY_LOGIN_FORM);
     await signOut(auth);
   };
 
-  const handleSubmitEvent = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmitEvent = async (event: FormEvent) => {
+    event.preventDefault();
     setSaving(true);
     setDataError(null);
     setSuccessMessage(null);
@@ -295,8 +359,8 @@ export default function Admin() {
     }
   };
 
-  const handleSubmitService = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmitService = async (event: FormEvent) => {
+    event.preventDefault();
     setSaving(true);
     setDataError(null);
     setSuccessMessage(null);
@@ -319,8 +383,8 @@ export default function Admin() {
     }
   };
 
-  const handleSubmitOnlineWorshipVideo = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmitOnlineWorshipVideo = async (event: FormEvent) => {
+    event.preventDefault();
     setVideoSaving(true);
     setDataError(null);
     setSuccessMessage(null);
@@ -351,6 +415,56 @@ export default function Admin() {
       );
     } finally {
       setVideoSaving(false);
+    }
+  };
+
+  const handleSubmitAdminUser = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!user || !isSuperadmin) {
+      setDataError("Hanya superadmin yang bisa membuat akun admin baru.");
+      return;
+    }
+
+    const email = normalizeAdminEmail(adminUserForm.email);
+    const password = adminUserForm.password;
+
+    if (!email) {
+      setDataError("Email admin wajib diisi.");
+      return;
+    }
+
+    if (password.trim().length < 6) {
+      setDataError("Password admin minimal 6 karakter.");
+      return;
+    }
+
+    if (adminUsers.some((item) => item.email === email && item.role === "superadmin")) {
+      setDataError("Email tersebut sudah dipakai sebagai superadmin dan tidak bisa ditimpa menjadi admin.");
+      return;
+    }
+
+    setAdminSaving(true);
+    setDataError(null);
+    setSuccessMessage(null);
+
+    try {
+      const createdUser = await createEmailPasswordUser(email, password);
+
+      await upsertAdminProfile(createdUser.localId, {
+        email,
+        role: "admin",
+        createdAt: new Date().toISOString(),
+        createdBy: user.uid,
+      });
+
+      resetAdminUserForm();
+      setSuccessMessage(`Akun admin ${email} berhasil dibuat atau disinkronkan.`);
+      await fetchData(adminProfile);
+    } catch (error) {
+      setDataError(getAdminProvisionErrorMessage(error));
+    } finally {
+      setAdminSaving(false);
     }
   };
 
@@ -395,29 +509,29 @@ export default function Admin() {
     });
   };
 
-  const handleDelete = async (coll: CollectionName, id: string) => {
-    const itemLabel = coll === "events" ? "event" : "layanan";
+  const handleDelete = async (collectionName: CollectionName, id: string) => {
+    const itemLabel = collectionName === "events" ? "event" : "layanan";
 
     if (!window.confirm(`Hapus ${itemLabel} ini?`)) {
       return;
     }
 
-    setDeletingKey(`${coll}:${id}`);
+    setDeletingKey(`${collectionName}:${id}`);
     setDataError(null);
     setSuccessMessage(null);
 
     try {
-      await deleteDoc(doc(db, coll, id));
+      await deleteDoc(doc(db, collectionName, id));
 
-      if (coll === "events" && editingEventId === id) {
+      if (collectionName === "events" && editingEventId === id) {
         resetEventForm();
       }
 
-      if (coll === "services" && editingServiceId === id) {
+      if (collectionName === "services" && editingServiceId === id) {
         resetServiceForm();
       }
 
-      setSuccessMessage(`${coll === "events" ? "Event" : "Layanan"} berhasil dihapus.`);
+      setSuccessMessage(`${collectionName === "events" ? "Event" : "Layanan"} berhasil dihapus.`);
       await fetchData();
     } catch (error) {
       setDataError(getDataErrorMessage(error, `Gagal menghapus ${itemLabel}. Jika tombol delete tetap ditolak, deploy ulang rules Firestore terbaru.`));
@@ -437,15 +551,15 @@ export default function Admin() {
     );
   }
 
-  if (!user || !hasAdminAccess) {
+  if (!user || !canAccessAdmin) {
     return (
       <div className="pt-32 pb-24 px-4">
         <div className="max-w-2xl mx-auto bg-white rounded-[2rem] border border-church-gold/10 p-8 md:p-12 text-center shadow-sm">
           <h2 className="serif text-4xl font-bold mb-6 uppercase">Admin Dashboard</h2>
           <p className="mb-4 text-church-dark/70">
             {!user
-              ? "Silakan login dengan akun Google admin untuk mengelola konten gereja."
-              : "Akun Google Anda sudah masuk, tetapi belum memiliki izin admin untuk dashboard ini."}
+              ? "Silakan login dengan email dan password admin untuk mengelola konten gereja."
+              : "Akun Anda sudah masuk, tetapi belum memiliki role admin untuk dashboard ini."}
           </p>
 
           {user?.email && (
@@ -460,18 +574,53 @@ export default function Admin() {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <AppButton
-              type="button"
-              onClick={login}
-              disabled={loginLoading}
-              className="bg-church-dark text-church-cream px-8 py-4 rounded-full font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-church-gold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {loginLoading ? <Loader2 className="animate-spin" size={20} /> : <LogIn size={20} />}
-              {loginLoading ? "Memproses Login..." : "Login with Google"}
-            </AppButton>
+          {!user && (
+            <form onSubmit={login} className="max-w-md mx-auto space-y-5 text-left">
+              <div>
+                <label htmlFor="admin-email" className="mb-2 block text-xs font-bold uppercase tracking-[0.22em] text-church-dark/50">
+                  Email Admin
+                </label>
+                <input
+                  id="admin-email"
+                  type="email"
+                  placeholder="admin@gkkdjakarta.org"
+                  className="w-full rounded-2xl border border-church-gold/15 px-5 py-4 focus:outline-none focus:border-church-gold"
+                  value={loginForm.email}
+                  onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
+                  autoComplete="username"
+                  required
+                />
+              </div>
 
-            {user && (
+              <div>
+                <label htmlFor="admin-password" className="mb-2 block text-xs font-bold uppercase tracking-[0.22em] text-church-dark/50">
+                  Password
+                </label>
+                <input
+                  id="admin-password"
+                  type="password"
+                  placeholder="Masukkan password admin"
+                  className="w-full rounded-2xl border border-church-gold/15 px-5 py-4 focus:outline-none focus:border-church-gold"
+                  value={loginForm.password}
+                  onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+
+              <AppButton
+                type="submit"
+                disabled={loginLoading}
+                className="w-full bg-church-dark text-church-cream px-8 py-4 rounded-full font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-church-gold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {loginLoading ? <Loader2 className="animate-spin" size={20} /> : <LogIn size={20} />}
+                {loginLoading ? "Memproses Login..." : "Login Admin"}
+              </AppButton>
+            </form>
+          )}
+
+          {user && (
+            <div className="flex justify-center">
               <AppButton
                 type="button"
                 onClick={logout}
@@ -479,12 +628,8 @@ export default function Admin() {
               >
                 <LogOut size={20} /> Logout
               </AppButton>
-            )}
-          </div>
-
-          <p className="mt-6 text-sm text-church-dark/50">
-            Jika popup diblokir browser, login akan dialihkan ke halaman Google secara otomatis.
-          </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -495,7 +640,9 @@ export default function Admin() {
       <div className="flex justify-between items-center mb-12">
         <div>
           <h2 className="serif text-4xl font-bold uppercase">CMS Dashboard</h2>
-          <p className="text-sm uppercase tracking-widest text-church-dark/50 mt-2">{user.email}</p>
+          <p className="text-sm uppercase tracking-widest text-church-dark/50 mt-2">
+            {user.email} | {isSuperadmin ? "Superadmin" : "Admin"}
+          </p>
         </div>
         <AppButton type="button" onClick={logout} className="text-church-dark/60 hover:text-red-500 flex items-center gap-2 uppercase text-sm font-bold tracking-widest">
           <LogOut size={18} /> Logout
@@ -542,6 +689,17 @@ export default function Admin() {
         >
           Jadwal Ibadah
         </AppButton>
+        {isSuperadmin && (
+          <AppButton
+            type="button"
+            buttonMotion="nav"
+            active={activeTab === "users"}
+            onClick={() => setActiveTab("users")}
+            className={`pb-4 uppercase text-sm font-bold tracking-widest transition-colors ${activeTab === "users" ? "text-church-gold border-b-2 border-church-gold" : "text-church-dark/40"}`}
+          >
+            User Admin
+          </AppButton>
+        )}
       </div>
 
       {activeTab === "events" ? (
@@ -564,27 +722,27 @@ export default function Admin() {
                 placeholder="Judul Event"
                 className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
                 value={eventForm.title}
-                onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                onChange={(event) => setEventForm({ ...eventForm, title: event.target.value })}
                 required
               />
               <input
                 type="date"
                 className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
                 value={eventForm.date}
-                onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+                onChange={(event) => setEventForm({ ...eventForm, date: event.target.value })}
                 required
               />
               <input
                 type="time"
                 className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
                 value={eventForm.time}
-                onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })}
+                onChange={(event) => setEventForm({ ...eventForm, time: event.target.value })}
                 required
               />
               <select
                 className="w-full border-b border-church-gold/20 py-2 bg-transparent focus:outline-none focus:border-church-gold"
                 value={eventLocationOption}
-                onChange={(e) => handleEventLocationChange(e.target.value)}
+                onChange={(event) => handleEventLocationChange(event.target.value)}
                 required
               >
                 <option value="" disabled>
@@ -602,7 +760,7 @@ export default function Admin() {
                   placeholder="Tulis lokasi lainnya"
                   className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
                   value={eventForm.location}
-                  onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })}
+                  onChange={(event) => setEventForm({ ...eventForm, location: event.target.value })}
                   required
                 />
               )}
@@ -611,7 +769,7 @@ export default function Admin() {
                 placeholder="Upload Link Pendaftaran"
                 className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
                 value={eventForm.registrationLink}
-                onChange={(e) => setEventForm({ ...eventForm, registrationLink: e.target.value })}
+                onChange={(event) => setEventForm({ ...eventForm, registrationLink: event.target.value })}
                 required
               />
               <AppButton
@@ -637,7 +795,7 @@ export default function Admin() {
                 placeholder="https://www.youtube.com/watch?v=..."
                 className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
                 value={onlineWorshipVideo.youtubeUrl}
-                onChange={(e) => setOnlineWorshipVideo({ youtubeUrl: e.target.value })}
+                onChange={(event) => setOnlineWorshipVideo({ youtubeUrl: event.target.value })}
                 required
               />
 
@@ -675,7 +833,9 @@ export default function Admin() {
               <div key={event.id} className="bg-white p-6 rounded-2xl border border-church-gold/10 flex justify-between items-center">
                 <div>
                   <h4 className="font-bold uppercase tracking-tight">{event.title}</h4>
-                  <p className="text-sm text-church-dark/60">{formatEventDate(event.date)} - {formatEventTime(event.time)}</p>
+                  <p className="text-sm text-church-dark/60">
+                    {formatEventDate(event.date)} - {formatEventTime(event.time)}
+                  </p>
                   <a
                     href={event.registrationLink || "#"}
                     target="_blank"
@@ -728,7 +888,7 @@ export default function Admin() {
                 placeholder="Nama Layanan"
                 className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
                 value={serviceForm.title}
-                onChange={(e) => setServiceForm({ ...serviceForm, title: e.target.value })}
+                onChange={(event) => setServiceForm({ ...serviceForm, title: event.target.value })}
                 required
               />
               <textarea
@@ -736,7 +896,7 @@ export default function Admin() {
                 className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold resize-none"
                 rows={3}
                 value={serviceForm.description}
-                onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                onChange={(event) => setServiceForm({ ...serviceForm, description: event.target.value })}
                 required
               />
               <AppButton
@@ -779,8 +939,76 @@ export default function Admin() {
             ))}
           </div>
         </div>
-      ) : (
+      ) : activeTab === "worship" ? (
         <WorshipScheduleAdmin />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] gap-12">
+          <div>
+            <form onSubmit={handleSubmitAdminUser} className="bg-white p-8 rounded-3xl border border-church-gold/10 space-y-6">
+              <div>
+                <h3 className="serif text-xl font-bold uppercase mb-2">Tambah Admin</h3>
+                <p className="text-sm leading-relaxed text-church-dark/60">
+                  Superadmin bisa membuat akun baru berbasis email dan password, lalu langsung memberi role admin.
+                </p>
+              </div>
+
+              <input
+                type="email"
+                placeholder="email-admin@domain.com"
+                className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
+                value={adminUserForm.email}
+                onChange={(event) => setAdminUserForm((current) => ({ ...current, email: event.target.value }))}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password sementara admin"
+                className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
+                value={adminUserForm.password}
+                onChange={(event) => setAdminUserForm((current) => ({ ...current, password: event.target.value }))}
+                minLength={6}
+                required
+              />
+
+              <p className="text-xs leading-relaxed text-church-dark/50">
+                Gunakan password sementara minimal 6 karakter. Jika email sudah ada di Firebase Authentication, isi password akun yang benar untuk sinkronisasi role admin.
+              </p>
+
+              <AppButton
+                type="submit"
+                disabled={adminSaving}
+                className="w-full bg-church-dark text-church-cream py-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:bg-church-gold transition-colors"
+              >
+                {adminSaving ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
+                {adminSaving ? "Menyimpan..." : "Buat Admin"}
+              </AppButton>
+            </form>
+          </div>
+
+          <div className="space-y-4">
+            {adminUsers.length === 0 ? (
+              <div className="bg-white p-8 rounded-3xl border border-church-gold/10 text-center text-church-dark/55">
+                Belum ada user admin yang tersimpan.
+              </div>
+            ) : (
+              adminUsers.map((item) => (
+                <div key={item.id} className="bg-white p-6 rounded-2xl border border-church-gold/10 flex justify-between items-center gap-4">
+                  <div>
+                    <p className="font-bold uppercase tracking-tight">{item.email}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.22em] text-church-gold">
+                      {item.role === "superadmin" ? "Superadmin" : "Admin"}
+                    </p>
+                    {item.createdAt && (
+                      <p className="mt-3 text-sm text-church-dark/50">
+                        Dibuat {new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.createdAt))}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

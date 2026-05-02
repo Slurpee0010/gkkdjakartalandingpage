@@ -6,9 +6,45 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function currentAdminDoc() {
+      return get(/databases/$(database)/documents/adminUsers/$(request.auth.uid));
+    }
+
+    function isBootstrapSuperadmin(userId) {
+      return isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.auth.token.email == "gkkdjak+superadmin@gmail.com";
+    }
+
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.email == "gkkdjak@gmail.com" && request.auth.token.email_verified == true);
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
+        (
+          currentAdminDoc().data.role == "admin" ||
+          currentAdminDoc().data.role == "superadmin"
+        );
+    }
+
+    function isSuperadmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
+        currentAdminDoc().data.role == "superadmin";
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['email', 'role', 'createdAt']) &&
+             data.keys().hasOnly(['email', 'role', 'createdAt', 'createdBy']) &&
+             data.email is string &&
+             data.email.size() > 0 &&
+             data.email.size() < 320 &&
+             (
+               data.role == "admin" ||
+               data.role == "superadmin"
+             ) &&
+             data.createdAt is string &&
+             data.createdAt.size() > 0 &&
+             data.createdAt.size() < 100 &&
+             (!('createdBy' in data) || (data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() < 128));
     }
 
     function isValidEvent(data) {
@@ -57,6 +93,35 @@ service cloud.firestore {
              data.youtubeUrl.size() < 2000 &&
              data.youtubeUrl.matches('^https?://(www\\.)?(youtube\\.com|m\\.youtube\\.com|youtu\\.be)/.+') &&
              (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() < 100));
+    }
+
+    match /adminUsers/{userId} {
+      allow get: if isAuthenticated() && (request.auth.uid == userId || isSuperadmin());
+      allow list: if isSuperadmin();
+      allow create: if
+        (
+          isSuperadmin() &&
+          isValidAdminUser(request.resource.data) &&
+          request.resource.data.role == "admin"
+        ) ||
+        (
+          isBootstrapSuperadmin(userId) &&
+          isValidAdminUser(request.resource.data) &&
+          request.resource.data.role == "superadmin" &&
+          request.resource.data.email == "gkkdjak+superadmin@gmail.com"
+        );
+      allow update: if
+        (
+          isSuperadmin() &&
+          isValidAdminUser(request.resource.data)
+        ) ||
+        (
+          isBootstrapSuperadmin(userId) &&
+          isValidAdminUser(request.resource.data) &&
+          request.resource.data.role == "superadmin" &&
+          request.resource.data.email == "gkkdjak+superadmin@gmail.com"
+        );
+      allow delete: if false;
     }
 
     match /events/{eventId} {
