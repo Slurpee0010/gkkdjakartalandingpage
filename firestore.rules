@@ -1,13 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper Functions
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function currentAdminDoc() {
       return get(/databases/$(database)/documents/adminUsers/$(request.auth.uid));
+    }
+
+    function adminEmailMatchesAuth() {
+      return currentAdminDoc().data.email == request.auth.token.email;
     }
 
     function isBootstrapSuperadmin(userId) {
@@ -19,6 +22,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
+        adminEmailMatchesAuth() &&
         (
           currentAdminDoc().data.role == "admin" ||
           currentAdminDoc().data.role == "superadmin"
@@ -28,71 +32,107 @@ service cloud.firestore {
     function isSuperadmin() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)) &&
+        adminEmailMatchesAuth() &&
         currentAdminDoc().data.role == "superadmin";
+    }
+
+    function isValidTimestamp(value) {
+      return value is string &&
+        value.size() > 0 &&
+        value.size() < 100;
     }
 
     function isValidAdminUser(data) {
       return data.keys().hasAll(['email', 'role', 'createdAt']) &&
-             data.keys().hasOnly(['email', 'role', 'createdAt', 'createdBy']) &&
-             data.email is string &&
-             data.email.size() > 0 &&
-             data.email.size() < 320 &&
-             (
-               data.role == "admin" ||
-               data.role == "superadmin"
-             ) &&
-             data.createdAt is string &&
-             data.createdAt.size() > 0 &&
-             data.createdAt.size() < 100 &&
-             (!('createdBy' in data) || (data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() < 128));
+        data.keys().hasOnly(['email', 'role', 'createdAt', 'createdBy']) &&
+        data.email is string &&
+        data.email.size() > 0 &&
+        data.email.size() < 320 &&
+        data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$') &&
+        (
+          data.role == "admin" ||
+          data.role == "superadmin"
+        ) &&
+        isValidTimestamp(data.createdAt) &&
+        (
+          !('createdBy' in data) ||
+          (
+            data.createdBy is string &&
+            data.createdBy.size() > 0 &&
+            data.createdBy.size() < 128
+          )
+        );
     }
 
     function isValidEvent(data) {
       return data.keys().hasAll(['title', 'date', 'time', 'location', 'registrationLink']) &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.date is string && data.date.size() > 0 && data.date.size() < 100 &&
-             data.time is string && data.time.size() > 0 && data.time.size() < 100 &&
-             data.location is string && data.location.size() > 0 && data.location.size() < 500 &&
-             data.registrationLink is string &&
-             data.registrationLink.size() > 0 &&
-             data.registrationLink.size() < 2000 &&
-             data.registrationLink.matches('^https?://.+');
+        data.keys().hasOnly(['title', 'date', 'time', 'location', 'registrationLink', 'createdAt']) &&
+        data.title is string &&
+        data.title.size() > 0 &&
+        data.title.size() < 200 &&
+        data.date is string &&
+        data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        data.time is string &&
+        data.time.matches('^([01]\\d|2[0-3]):[0-5]\\d$') &&
+        data.location is string &&
+        data.location.size() > 0 &&
+        data.location.size() < 500 &&
+        data.registrationLink is string &&
+        data.registrationLink.size() > 0 &&
+        data.registrationLink.size() < 2000 &&
+        data.registrationLink.matches('^https://.+') &&
+        (!('createdAt' in data) || isValidTimestamp(data.createdAt));
     }
 
     function isValidService(data) {
       return data.keys().hasAll(['title', 'description']) &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.description is string && data.description.size() > 0 && data.description.size() < 2000;
+        data.keys().hasOnly(['title', 'description', 'createdAt']) &&
+        data.title is string &&
+        data.title.size() > 0 &&
+        data.title.size() < 200 &&
+        data.description is string &&
+        data.description.size() > 0 &&
+        data.description.size() < 2000 &&
+        (!('createdAt' in data) || isValidTimestamp(data.createdAt));
     }
 
     function isValidWorshipSchedule(data) {
       return data.keys().hasAll(['satellite', 'place', 'serviceName', 'category', 'serviceTime', 'contactPerson']) &&
-             (
-               data.satellite == "Jakarta Center" ||
-               data.satellite == "Jakarta Utara" ||
-               data.satellite == "Southers" ||
-               data.satellite == "Ciledug" ||
-               data.satellite == "Serpong"
-             ) &&
-             data.place is string && data.place.size() > 0 && data.place.size() < 1000 &&
-             data.serviceName is string && data.serviceName.size() > 0 && data.serviceName.size() < 200 &&
-             (
-               data.category == "onsite" ||
-               data.category == "online" ||
-               data.category == "onsite dan online"
-             ) &&
-             data.serviceTime is string && data.serviceTime.size() > 0 && data.serviceTime.size() < 100 &&
-             data.contactPerson is string && data.contactPerson.size() > 0 && data.contactPerson.size() < 300;
+        data.keys().hasOnly(['satellite', 'place', 'serviceName', 'category', 'serviceTime', 'contactPerson', 'createdAt']) &&
+        (
+          data.satellite == "Jakarta Center" ||
+          data.satellite == "Jakarta Utara" ||
+          data.satellite == "Southers" ||
+          data.satellite == "Ciledug" ||
+          data.satellite == "Serpong"
+        ) &&
+        data.place is string &&
+        data.place.size() > 0 &&
+        data.place.size() < 1000 &&
+        data.serviceName is string &&
+        data.serviceName.size() > 0 &&
+        data.serviceName.size() < 200 &&
+        (
+          data.category == "onsite" ||
+          data.category == "online" ||
+          data.category == "onsite dan online"
+        ) &&
+        data.serviceTime is string &&
+        data.serviceTime.matches('^([01]\\d|2[0-3]):[0-5]\\d$') &&
+        data.contactPerson is string &&
+        data.contactPerson.size() > 0 &&
+        data.contactPerson.size() < 300 &&
+        (!('createdAt' in data) || isValidTimestamp(data.createdAt));
     }
 
     function isValidOnlineWorshipVideo(data) {
       return data.keys().hasAll(['youtubeUrl']) &&
-             data.keys().hasOnly(['youtubeUrl', 'updatedAt']) &&
-             data.youtubeUrl is string &&
-             data.youtubeUrl.size() > 0 &&
-             data.youtubeUrl.size() < 2000 &&
-             data.youtubeUrl.matches('^https?://(www\\.)?(youtube\\.com|m\\.youtube\\.com|youtu\\.be)/.+') &&
-             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() < 100));
+        data.keys().hasOnly(['youtubeUrl', 'updatedAt']) &&
+        data.youtubeUrl is string &&
+        data.youtubeUrl.size() > 0 &&
+        data.youtubeUrl.size() < 2000 &&
+        data.youtubeUrl.matches('^https://(www\\.)?(youtube\\.com|m\\.youtube\\.com|youtu\\.be)/.+') &&
+        (!('updatedAt' in data) || isValidTimestamp(data.updatedAt));
     }
 
     match /adminUsers/{userId} {
@@ -113,7 +153,9 @@ service cloud.firestore {
       allow update: if
         (
           isSuperadmin() &&
-          isValidAdminUser(request.resource.data)
+          resource.data.role == "admin" &&
+          isValidAdminUser(request.resource.data) &&
+          request.resource.data.role == "admin"
         ) ||
         (
           isBootstrapSuperadmin(userId) &&
@@ -143,11 +185,12 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow read: if true;
+      allow get: if settingId == "onlineWorshipVideo";
+      allow list: if false;
       allow create, update: if isAdmin() &&
         settingId == "onlineWorshipVideo" &&
         isValidOnlineWorshipVideo(request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && settingId == "onlineWorshipVideo";
     }
   }
 }

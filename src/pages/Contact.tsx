@@ -62,6 +62,8 @@ export default function Contact() {
                     type="text"
                     className="w-full bg-church-cream/50 border-b border-church-gold/20 py-4 px-0 focus:outline-none focus:border-church-gold transition-colors"
                     placeholder="John Doe"
+                    maxLength={120}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -70,6 +72,8 @@ export default function Contact() {
                     type="email"
                     className="w-full bg-church-cream/50 border-b border-church-gold/20 py-4 px-0 focus:outline-none focus:border-church-gold transition-colors"
                     placeholder="john@example.com"
+                    maxLength={320}
+                    required
                   />
                 </div>
               </div>
@@ -79,6 +83,8 @@ export default function Contact() {
                   type="text"
                   className="w-full bg-church-cream/50 border-b border-church-gold/20 py-4 px-0 focus:outline-none focus:border-church-gold transition-colors"
                   placeholder="Pelayanan Doa / Pertanyaan Umum"
+                  maxLength={160}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -87,6 +93,8 @@ export default function Contact() {
                   rows={4}
                   className="w-full bg-church-cream/50 border-b border-church-gold/20 py-4 px-0 focus:outline-none focus:border-church-gold transition-colors resize-none"
                   placeholder="Tuliskan pesan Anda di sini..."
+                  maxLength={1500}
+                  required
                 />
               </div>
               <AppButton

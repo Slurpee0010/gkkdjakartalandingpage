@@ -9,6 +9,44 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  const allowedOrigins = new Set(
+    [
+      process.env.APP_URL,
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ].filter((origin): origin is string => Boolean(origin)),
+  );
+
+  app.disable("x-powered-by");
+  app.use((_, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+    next();
+  });
+
+  app.use("/api", (req, res, next) => {
+    const origin = req.headers.origin;
+
+    if (origin && !allowedOrigins.has(origin)) {
+      return res.status(403).json({ error: "Origin not allowed" });
+    }
+
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
+
+    res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+    res.setHeader("Access-Control-Max-Age", "3600");
+
+    if (req.method === "OPTIONS") {
+      return res.status(204).end();
+    }
+
+    return next();
+  });
 
   // API routes
   app.get("/api/events", (req, res) => {

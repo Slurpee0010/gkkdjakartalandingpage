@@ -4,7 +4,6 @@ import { db } from "./firebase";
 
 export const ADMIN_USERS_COLLECTION = "adminUsers";
 export const DEFAULT_SUPERADMIN_EMAIL = "gkkdjak+superadmin@gmail.com";
-export const DEFAULT_SUPERADMIN_PASSWORD = "123123";
 
 export type AdminRole = "admin" | "superadmin";
 

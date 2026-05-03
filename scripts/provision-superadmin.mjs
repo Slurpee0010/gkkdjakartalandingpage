@@ -1,13 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import "dotenv/config";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 
-const SUPERADMIN_EMAIL = "gkkdjak+superadmin@gmail.com";
-const SUPERADMIN_PASSWORD = "123123";
+const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL ?? "gkkdjak+superadmin@gmail.com";
+const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD;
+const MIN_SUPERADMIN_PASSWORD_LENGTH = 12;
 
 function normalizeEmail(email) {
   return email.trim().toLowerCase();
@@ -92,6 +94,21 @@ async function upsertSuperadminProfile(config, idToken, uid, email) {
 }
 
 async function main() {
+  if (!SUPERADMIN_PASSWORD) {
+    throw new Error("SUPERADMIN_PASSWORD wajib diisi lewat environment variable.");
+  }
+
+  if (
+    SUPERADMIN_PASSWORD.length < MIN_SUPERADMIN_PASSWORD_LENGTH ||
+    !/[a-z]/.test(SUPERADMIN_PASSWORD) ||
+    !/[A-Z]/.test(SUPERADMIN_PASSWORD) ||
+    !/\d/.test(SUPERADMIN_PASSWORD)
+  ) {
+    throw new Error(
+      "SUPERADMIN_PASSWORD minimal 12 karakter dan harus memuat huruf besar, huruf kecil, dan angka.",
+    );
+  }
+
   const firebaseConfig = await readFirebaseConfig();
   const email = normalizeEmail(SUPERADMIN_EMAIL);
 
@@ -99,8 +116,8 @@ async function main() {
   await upsertSuperadminProfile(firebaseConfig, authUser.idToken, authUser.localId, email);
 
   console.log(`Superadmin siap dipakai: ${email}`);
-  console.log("Password sementara: 123123");
-  console.log("Silakan login dari menu admin lalu ganti password secara manual.");
+  console.log("Password superadmin dibaca dari environment dan tidak ditampilkan di console.");
+  console.log("Silakan login dari menu admin lalu ganti password secara manual jika diperlukan.");
 }
 
 main().catch((error) => {

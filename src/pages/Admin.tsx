@@ -36,6 +36,18 @@ import {
   normalizeAdminEmail,
   upsertAdminProfile,
 } from "../lib/adminAuth";
+import {
+  SECURITY_LIMITS,
+  getSafeHttpUrl,
+  isValidationError,
+  type ValidationResult,
+  validateEmailAddress,
+  validateHttpsUrl,
+  validateIsoDate,
+  validateRequiredText,
+  validateStrongPassword,
+  validateTime,
+} from "../lib/formSecurity";
 import { getYoutubeEmbedUrl, getYoutubeWatchUrl, isYoutubeVideoUrl } from "../lib/youtube";
 
 interface EventItem {
@@ -63,6 +75,19 @@ interface AdminUserListItem extends AdminUserProfile {
 }
 
 type CollectionName = "events" | "services";
+
+interface EventFormPayload {
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  registrationLink: string;
+}
+
+interface ServiceFormPayload {
+  title: string;
+  description: string;
+}
 
 const EMPTY_EVENT_FORM = { title: "", date: "", time: "", location: "", registrationLink: "" };
 const EMPTY_SERVICE_FORM = { title: "", description: "" };
@@ -145,6 +170,50 @@ function formatEventTime(time: string) {
   }
 
   return time;
+}
+
+function validateEventForm(form: typeof EMPTY_EVENT_FORM): ValidationResult<EventFormPayload> {
+  const title = validateRequiredText(form.title, "Judul event", SECURITY_LIMITS.shortTextMaxLength);
+  if (isValidationError(title)) return title;
+
+  const date = validateIsoDate(form.date, "Tanggal event");
+  if (isValidationError(date)) return date;
+
+  const time = validateTime(form.time, "Jam event");
+  if (isValidationError(time)) return time;
+
+  const location = validateRequiredText(form.location, "Lokasi event", SECURITY_LIMITS.mediumTextMaxLength);
+  if (isValidationError(location)) return location;
+
+  const registrationLink = validateHttpsUrl(form.registrationLink, "Link pendaftaran");
+  if (isValidationError(registrationLink)) return registrationLink;
+
+  return {
+    ok: true as const,
+    value: {
+      title: title.value,
+      date: date.value,
+      time: time.value,
+      location: location.value,
+      registrationLink: registrationLink.value,
+    },
+  };
+}
+
+function validateServiceForm(form: typeof EMPTY_SERVICE_FORM): ValidationResult<ServiceFormPayload> {
+  const title = validateRequiredText(form.title, "Nama layanan", SECURITY_LIMITS.shortTextMaxLength);
+  if (isValidationError(title)) return title;
+
+  const description = validateRequiredText(form.description, "Deskripsi layanan", SECURITY_LIMITS.longTextMaxLength);
+  if (isValidationError(description)) return description;
+
+  return {
+    ok: true as const,
+    value: {
+      title: title.value,
+      description: description.value,
+    },
+  };
 }
 
 export default function Admin() {
@@ -337,16 +406,24 @@ export default function Admin() {
 
   const handleSubmitEvent = async (event: FormEvent) => {
     event.preventDefault();
-    setSaving(true);
     setDataError(null);
     setSuccessMessage(null);
 
+    const validatedEvent = validateEventForm(eventForm);
+
+    if (isValidationError(validatedEvent)) {
+      setDataError(validatedEvent.message);
+      return;
+    }
+
+    setSaving(true);
+
     try {
       if (editingEventId) {
-        await updateDoc(doc(db, "events", editingEventId), { ...eventForm });
+        await updateDoc(doc(db, "events", editingEventId), { ...validatedEvent.value });
         setSuccessMessage("Event berhasil diperbarui.");
       } else {
-        await addDoc(collection(db, "events"), { ...eventForm, createdAt: new Date().toISOString() });
+        await addDoc(collection(db, "events"), { ...validatedEvent.value, createdAt: new Date().toISOString() });
         setSuccessMessage("Event berhasil ditambahkan.");
       }
 
@@ -361,16 +438,24 @@ export default function Admin() {
 
   const handleSubmitService = async (event: FormEvent) => {
     event.preventDefault();
-    setSaving(true);
     setDataError(null);
     setSuccessMessage(null);
 
+    const validatedService = validateServiceForm(serviceForm);
+
+    if (isValidationError(validatedService)) {
+      setDataError(validatedService.message);
+      return;
+    }
+
+    setSaving(true);
+
     try {
       if (editingServiceId) {
-        await updateDoc(doc(db, "services", editingServiceId), { ...serviceForm });
+        await updateDoc(doc(db, "services", editingServiceId), { ...validatedService.value });
         setSuccessMessage("Layanan berhasil diperbarui.");
       } else {
-        await addDoc(collection(db, "services"), serviceForm);
+        await addDoc(collection(db, "services"), validatedService.value);
         setSuccessMessage("Layanan berhasil ditambahkan.");
       }
 
@@ -385,26 +470,31 @@ export default function Admin() {
 
   const handleSubmitOnlineWorshipVideo = async (event: FormEvent) => {
     event.preventDefault();
-    setVideoSaving(true);
     setDataError(null);
     setSuccessMessage(null);
 
-    const trimmedUrl = onlineWorshipVideo.youtubeUrl.trim();
+    const validatedUrl = validateHttpsUrl(onlineWorshipVideo.youtubeUrl, "Link video YouTube");
 
-    if (!isYoutubeVideoUrl(trimmedUrl)) {
-      setDataError("Gunakan link video YouTube yang valid agar video bisa diputar langsung di halaman Event.");
-      setVideoSaving(false);
+    if (isValidationError(validatedUrl)) {
+      setDataError(validatedUrl.message);
       return;
     }
+
+    if (!isYoutubeVideoUrl(validatedUrl.value)) {
+      setDataError("Gunakan link video YouTube yang valid agar video bisa diputar langsung di halaman Event.");
+      return;
+    }
+
+    setVideoSaving(true);
 
     try {
       await setDoc(
         doc(db, "settings", ONLINE_WORSHIP_VIDEO_DOC_ID),
-        { youtubeUrl: trimmedUrl, updatedAt: new Date().toISOString() },
+        { youtubeUrl: validatedUrl.value, updatedAt: new Date().toISOString() },
         { merge: true },
       );
 
-      setOnlineWorshipVideo({ youtubeUrl: trimmedUrl });
+      setOnlineWorshipVideo({ youtubeUrl: validatedUrl.value });
       setSuccessMessage("Link video ibadah online berhasil diperbarui.");
     } catch (error) {
       setDataError(
@@ -426,18 +516,22 @@ export default function Admin() {
       return;
     }
 
-    const email = normalizeAdminEmail(adminUserForm.email);
+    const emailValidation = validateEmailAddress(adminUserForm.email, "Email admin");
     const password = adminUserForm.password;
 
-    if (!email) {
-      setDataError("Email admin wajib diisi.");
+    if (isValidationError(emailValidation)) {
+      setDataError(emailValidation.message);
       return;
     }
 
-    if (password.trim().length < 6) {
-      setDataError("Password admin minimal 6 karakter.");
+    const passwordValidation = validateStrongPassword(password, "Password admin");
+
+    if (isValidationError(passwordValidation)) {
+      setDataError(passwordValidation.message);
       return;
     }
+
+    const email = emailValidation.value;
 
     if (adminUsers.some((item) => item.email === email && item.role === "superadmin")) {
       setDataError("Email tersebut sudah dipakai sebagai superadmin dan tidak bisa ditimpa menjadi admin.");
@@ -449,7 +543,7 @@ export default function Admin() {
     setSuccessMessage(null);
 
     try {
-      const createdUser = await createEmailPasswordUser(email, password);
+      const createdUser = await createEmailPasswordUser(email, passwordValidation.value);
 
       await upsertAdminProfile(createdUser.localId, {
         email,
@@ -829,43 +923,47 @@ export default function Admin() {
             </form>
           </div>
           <div className="lg:col-span-2 space-y-4">
-            {events.map((event) => (
-              <div key={event.id} className="bg-white p-6 rounded-2xl border border-church-gold/10 flex justify-between items-center">
-                <div>
-                  <h4 className="font-bold uppercase tracking-tight">{event.title}</h4>
-                  <p className="text-sm text-church-dark/60">
-                    {formatEventDate(event.date)} - {formatEventTime(event.time)}
-                  </p>
-                  <a
-                    href={event.registrationLink || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`mt-2 inline-block text-sm font-medium ${event.registrationLink ? "text-church-gold hover:text-church-dark" : "pointer-events-none text-church-dark/40"}`}
-                  >
-                    {event.registrationLink ? "Buka link pendaftaran" : "Link pendaftaran belum diisi"}
-                  </a>
+            {events.map((event) => {
+              const registrationLink = getSafeHttpUrl(event.registrationLink);
+
+              return (
+                <div key={event.id} className="bg-white p-6 rounded-2xl border border-church-gold/10 flex justify-between items-center">
+                  <div>
+                    <h4 className="font-bold uppercase tracking-tight">{event.title}</h4>
+                    <p className="text-sm text-church-dark/60">
+                      {formatEventDate(event.date)} - {formatEventTime(event.time)}
+                    </p>
+                    <a
+                      href={registrationLink ?? "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`mt-2 inline-block text-sm font-medium ${registrationLink ? "text-church-gold hover:text-church-dark" : "pointer-events-none text-church-dark/40"}`}
+                    >
+                      {registrationLink ? "Buka link pendaftaran" : "Link pendaftaran belum diisi"}
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AppButton
+                      type="button"
+                      buttonMotion="icon"
+                      onClick={() => handleEditEvent(event)}
+                      className="text-church-dark/60 hover:bg-church-gold/10 hover:text-church-gold p-2 rounded-lg transition-colors"
+                    >
+                      <Pencil size={18} />
+                    </AppButton>
+                    <AppButton
+                      type="button"
+                      buttonMotion="icon"
+                      disabled={deletingKey === `events:${String(event.id)}`}
+                      onClick={() => handleDelete("events", String(event.id))}
+                      className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {deletingKey === `events:${String(event.id)}` ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
+                    </AppButton>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <AppButton
-                    type="button"
-                    buttonMotion="icon"
-                    onClick={() => handleEditEvent(event)}
-                    className="text-church-dark/60 hover:bg-church-gold/10 hover:text-church-gold p-2 rounded-lg transition-colors"
-                  >
-                    <Pencil size={18} />
-                  </AppButton>
-                  <AppButton
-                    type="button"
-                    buttonMotion="icon"
-                    disabled={deletingKey === `events:${String(event.id)}`}
-                    onClick={() => handleDelete("events", String(event.id))}
-                    className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {deletingKey === `events:${String(event.id)}` ? <Loader2 className="animate-spin" size={20} /> : <Trash2 size={20} />}
-                  </AppButton>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : activeTab === "services" ? (
@@ -966,12 +1064,12 @@ export default function Admin() {
                 className="w-full border-b border-church-gold/20 py-2 focus:outline-none focus:border-church-gold"
                 value={adminUserForm.password}
                 onChange={(event) => setAdminUserForm((current) => ({ ...current, password: event.target.value }))}
-                minLength={6}
+                minLength={SECURITY_LIMITS.adminPasswordMinLength}
                 required
               />
 
               <p className="text-xs leading-relaxed text-church-dark/50">
-                Gunakan password sementara minimal 6 karakter. Jika email sudah ada di Firebase Authentication, isi password akun yang benar untuk sinkronisasi role admin.
+                Gunakan password sementara minimal 12 karakter dengan huruf besar, huruf kecil, dan angka. Jika email sudah ada di Firebase Authentication, isi password akun yang benar untuk sinkronisasi role admin.
               </p>
 
               <AppButton

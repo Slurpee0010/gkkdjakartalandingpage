@@ -6,6 +6,7 @@ import { collection, doc, onSnapshot, query, orderBy } from "firebase/firestore"
 import { getYoutubeEmbedUrl, getYoutubeWatchUrl } from "../lib/youtube";
 import AutoplayYoutubeEmbed from "../components/AutoplayYoutubeEmbed";
 import AppButton from "../components/ui/AppButton";
+import { getSafeHttpUrl } from "../lib/formSecurity";
 
 interface Event {
   id: number | string;
@@ -34,19 +35,6 @@ function formatEventTime(time: string) {
   }
 
   return time;
-}
-
-function getSafeRegistrationLink(link?: string) {
-  if (!link) {
-    return null;
-  }
-
-  try {
-    const url = new URL(link);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
 }
 
 export default function Events() {
@@ -95,7 +83,7 @@ export default function Events() {
 
         <div className="grid grid-cols-1 gap-6 mb-32">
           {events.map((event, index) => {
-            const registrationLink = getSafeRegistrationLink(event.registrationLink);
+            const registrationLink = getSafeHttpUrl(event.registrationLink);
 
             return (
             <motion.div

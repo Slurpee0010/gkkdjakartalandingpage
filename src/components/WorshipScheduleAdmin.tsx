@@ -24,6 +24,13 @@ import {
   type WorshipCategory,
   type WorshipScheduleItem,
 } from "../lib/worshipSchedules";
+import {
+  SECURITY_LIMITS,
+  isValidationError,
+  type ValidationResult,
+  validateRequiredText,
+  validateTime,
+} from "../lib/formSecurity";
 import AppButton from "./ui/AppButton";
 
 type WorshipFormState = {
@@ -31,6 +38,15 @@ type WorshipFormState = {
   place: string;
   serviceName: string;
   category: WorshipCategory | "";
+  serviceTime: string;
+  contactPerson: string;
+};
+
+type WorshipFormPayload = {
+  satellite: SatelliteOption;
+  place: string;
+  serviceName: string;
+  category: WorshipCategory;
   serviceTime: string;
   contactPerson: string;
 };
@@ -62,6 +78,40 @@ function getDataErrorMessage(error: unknown, fallbackMessage: string) {
 function extractTimeValue(time: string) {
   const match = time.match(/^(\d{2}:\d{2})/);
   return match ? match[1] : "";
+}
+
+function validateWorshipForm(form: WorshipFormState): ValidationResult<WorshipFormPayload> {
+  if (!form.satellite || !SATELLITE_OPTIONS.includes(form.satellite as SatelliteOption)) {
+    return { ok: false as const, message: "Gereja satelit wajib dipilih." };
+  }
+
+  const place = validateRequiredText(form.place, "Tempat ibadah", 1000);
+  if (isValidationError(place)) return place;
+
+  const serviceName = validateRequiredText(form.serviceName, "Nama ibadah", SECURITY_LIMITS.shortTextMaxLength);
+  if (isValidationError(serviceName)) return serviceName;
+
+  if (!form.category || !WORSHIP_CATEGORY_OPTIONS.includes(form.category as WorshipCategory)) {
+    return { ok: false as const, message: "Kategori ibadah wajib dipilih." };
+  }
+
+  const serviceTime = validateTime(form.serviceTime, "Jam ibadah");
+  if (isValidationError(serviceTime)) return serviceTime;
+
+  const contactPerson = validateRequiredText(form.contactPerson, "Contact person", 300);
+  if (isValidationError(contactPerson)) return contactPerson;
+
+  return {
+    ok: true as const,
+    value: {
+      satellite: form.satellite,
+      place: place.value,
+      serviceName: serviceName.value,
+      category: form.category,
+      serviceTime: serviceTime.value,
+      contactPerson: contactPerson.value,
+    },
+  };
 }
 
 export default function WorshipScheduleAdmin() {
@@ -142,19 +192,21 @@ export default function WorshipScheduleAdmin() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-
-    setSaving(true);
     setDataError(null);
     setSuccessMessage(null);
 
+    const validatedSchedule = validateWorshipForm(form);
+
+    if (isValidationError(validatedSchedule)) {
+      setDataError(validatedSchedule.message);
+      return;
+    }
+
+    setSaving(true);
+
     try {
       const payload = {
-        satellite: form.satellite,
-        place: form.place,
-        serviceName: form.serviceName,
-        category: form.category,
-        serviceTime: form.serviceTime,
-        contactPerson: form.contactPerson,
+        ...validatedSchedule.value,
         createdAt: new Date().toISOString(),
       };
 
@@ -233,7 +285,7 @@ export default function WorshipScheduleAdmin() {
           place: item.place,
           serviceName: item.serviceName,
           category: item.category,
-          serviceTime: item.serviceTime,
+          serviceTime: extractTimeValue(item.serviceTime),
           contactPerson: item.contactPerson,
           createdAt: new Date().toISOString(),
         });
