@@ -143,6 +143,12 @@ npm.cmd run hosting:preview
 
 Channel default project ini adalah `presentasi`, jadi deploy berikutnya akan memperbarui channel tersebut lagi.
 
+Penting:
+
+- Link preview bukan link permanen.
+- Default masa aktif channel di project ini adalah `7d`.
+- Jika hari ini sudah lewat lebih dari 7 hari sejak deploy terakhir, link lama memang akan mati dan Anda harus deploy ulang.
+
 ## Menggunakan Channel dan Waktu Kadaluarsa Custom
 
 Kalau Anda ingin channel berbeda untuk acara tertentu:
@@ -161,6 +167,7 @@ Contoh lain:
 ```powershell
 npm.cmd run hosting:preview -- --channel rapat-majelis --expires 7d
 npm.cmd run hosting:preview -- --channel ibadah-khusus --expires 30d
+npm.cmd run hosting:preview -- --channel presentasi-mei --expires 30d
 ```
 
 ## Alur Paling Praktis Untuk Presentasi

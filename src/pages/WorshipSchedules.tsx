@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { collection, getDocs } from "firebase/firestore";
-import { CalendarDays, Church, Clock3, MapPin, Phone, Radio } from "lucide-react";
+import { CalendarDays, Church, Clock3, MapPin, MessageCircle, Radio } from "lucide-react";
 import { db } from "../lib/firebase";
 import AppButton from "../components/ui/AppButton";
+import { createWhatsAppHref, extractPhoneNumber } from "../lib/whatsapp";
 import {
   DEFAULT_WORSHIP_SCHEDULES,
   SATELLITE_LOCAL_IMAGES,
@@ -21,10 +22,28 @@ import {
 
 const ALL_FILTER = "Semua Lokasi";
 
-function getPhoneHref(value: string) {
-  const phone = value.match(/(\+?\d[\d\s-]{7,}\d)/)?.[1];
+function getPicWhatsAppHref(item: WorshipScheduleItem) {
+  const phone = extractPhoneNumber(item.contactPerson);
 
-  return phone ? `tel:${phone.replace(/[^\d+]/g, "")}` : null;
+  if (!phone) {
+    return null;
+  }
+
+  return createWhatsAppHref(phone, buildPicMessage(item));
+}
+
+function buildPicMessage(item: WorshipScheduleItem) {
+  return [
+    "Shalom, saya ingin bertanya tentang jadwal ibadah GKKD Jakarta.",
+    "",
+    `Satelit: ${getSatelliteLabel(item.satellite)}`,
+    `Ibadah: ${item.serviceName}`,
+    `Waktu: ${formatWorshipTime(item.serviceTime)}`,
+    `Lokasi: ${item.place}`,
+    `PIC: ${item.contactPerson}`,
+    "",
+    "Terima kasih.",
+  ].join("\n");
 }
 
 function getSiteSubtitle(items: WorshipScheduleItem[]) {
@@ -293,7 +312,7 @@ export default function WorshipSchedules() {
 
                       <div className="space-y-4">
                         {group.items.map((item) => {
-                          const contactHref = getPhoneHref(item.contactPerson);
+                          const contactHref = getPicWhatsAppHref(item);
 
                           return (
                             <div
@@ -326,10 +345,13 @@ export default function WorshipSchedules() {
                                   {contactHref ? (
                                     <a
                                       href={contactHref}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      aria-label={`Hubungi PIC ${item.serviceName} ${getSatelliteLabel(item.satellite)} via WhatsApp`}
                                       className="inline-flex items-center gap-2 rounded-full bg-church-dark px-4 py-3 text-sm font-semibold text-church-cream hover:bg-church-gold transition-colors"
                                     >
-                                      <Phone size={16} />
-                                      {item.contactPerson}
+                                      <MessageCircle size={16} />
+                                      Hubungi PIC
                                     </a>
                                   ) : (
                                     <p className="text-sm font-semibold text-church-dark">{item.contactPerson}</p>

@@ -44,6 +44,7 @@ if (mode === "live") {
     expires,
     "--project",
     projectId,
+    "--json",
   );
 }
 
@@ -69,6 +70,7 @@ if (deployResult.status !== 0) {
 }
 
 const url =
+  extractJsonUrl(cleanedOutput) ??
   extractLabeledUrl(cleanedOutput, "Channel URL") ??
   extractLabeledUrl(cleanedOutput, "Hosting URL") ??
   extractFirstUrl(cleanedOutput);
@@ -128,4 +130,28 @@ function extractLabeledUrl(output, label) {
 
 function stripAnsi(output) {
   return output.replace(/\u001b\[[0-9;]*m/g, "");
+}
+
+function extractJsonUrl(output) {
+  try {
+    const parsed = JSON.parse(output);
+    if (parsed?.status !== "success") {
+      return null;
+    }
+
+    const result = parsed?.result;
+    if (!result || typeof result !== "object") {
+      return null;
+    }
+
+    for (const value of Object.values(result)) {
+      if (value && typeof value === "object" && "url" in value && typeof value.url === "string") {
+        return value.url;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }

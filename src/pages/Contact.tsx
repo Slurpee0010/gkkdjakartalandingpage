@@ -1,8 +1,47 @@
 import { motion } from "motion/react";
-import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { Mail, MapPin, MessageCircle, Send } from "lucide-react";
+import type { FormEvent } from "react";
 import AppButton from "../components/ui/AppButton";
+import { createWhatsAppHref } from "../lib/whatsapp";
+
+const CONTACT_WHATSAPP_NUMBER = "0822 39 400 400";
+
+function getFormValue(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "").trim();
+}
+
+function buildContactMessage(formData: FormData) {
+  const name = getFormValue(formData, "name");
+  const email = getFormValue(formData, "email");
+  const subject = getFormValue(formData, "subject");
+  const message = getFormValue(formData, "message");
+
+  return [
+    "Shalom GKKD Jakarta, saya ingin menghubungi tim gereja.",
+    "",
+    `Nama: ${name}`,
+    `Email: ${email}`,
+    `Subjek: ${subject}`,
+    "",
+    "Pesan:",
+    message,
+  ].join("\n");
+}
 
 export default function Contact() {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const whatsappHref = createWhatsAppHref(
+      CONTACT_WHATSAPP_NUMBER,
+      buildContactMessage(new FormData(event.currentTarget)),
+    );
+
+    if (whatsappHref) {
+      window.open(whatsappHref, "_blank", "noopener,noreferrer");
+    }
+  };
+
   return (
     <div className="pt-32 pb-24 px-4">
       <div className="max-w-7xl mx-auto">
@@ -30,11 +69,18 @@ export default function Contact() {
               </div>
               <div className="flex items-start gap-6">
                 <div className="w-12 h-12 bg-church-gold/10 rounded-full flex items-center justify-center text-church-gold shrink-0">
-                  <Phone size={24} />
+                  <MessageCircle size={24} />
                 </div>
                 <div>
-                  <h4 className="serif text-xl font-bold text-church-dark uppercase tracking-tight mb-2">Telepon</h4>
-                  <p className="text-church-dark/60 leading-relaxed">+62 813-7930-8391</p>
+                  <h4 className="serif text-xl font-bold text-church-dark uppercase tracking-tight mb-2">WhatsApp</h4>
+                  <a
+                    href={createWhatsAppHref(CONTACT_WHATSAPP_NUMBER) ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-church-dark/60 leading-relaxed hover:text-church-gold transition-colors"
+                  >
+                    {CONTACT_WHATSAPP_NUMBER}
+                  </a>
                 </div>
               </div>
               <div className="flex items-start gap-6">
@@ -54,11 +100,12 @@ export default function Contact() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white p-8 md:p-16 rounded-[3rem] border border-church-gold/10 shadow-xl"
           >
-            <form className="space-y-8" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-8" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-xs uppercase tracking-widest font-bold text-church-dark/40">Nama Lengkap</label>
                   <input
+                    name="name"
                     type="text"
                     className="w-full bg-church-cream/50 border-b border-church-gold/20 py-4 px-0 focus:outline-none focus:border-church-gold transition-colors"
                     placeholder="John Doe"
@@ -69,6 +116,7 @@ export default function Contact() {
                 <div className="space-y-2">
                   <label className="text-xs uppercase tracking-widest font-bold text-church-dark/40">Alamat Email</label>
                   <input
+                    name="email"
                     type="email"
                     className="w-full bg-church-cream/50 border-b border-church-gold/20 py-4 px-0 focus:outline-none focus:border-church-gold transition-colors"
                     placeholder="john@example.com"
@@ -80,6 +128,7 @@ export default function Contact() {
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-widest font-bold text-church-dark/40">Subjek</label>
                 <input
+                  name="subject"
                   type="text"
                   className="w-full bg-church-cream/50 border-b border-church-gold/20 py-4 px-0 focus:outline-none focus:border-church-gold transition-colors"
                   placeholder="Pelayanan Doa / Pertanyaan Umum"
@@ -90,6 +139,7 @@ export default function Contact() {
               <div className="space-y-2">
                 <label className="text-xs uppercase tracking-widest font-bold text-church-dark/40">Pesan Anda</label>
                 <textarea
+                  name="message"
                   rows={4}
                   className="w-full bg-church-cream/50 border-b border-church-gold/20 py-4 px-0 focus:outline-none focus:border-church-gold transition-colors resize-none"
                   placeholder="Tuliskan pesan Anda di sini..."
